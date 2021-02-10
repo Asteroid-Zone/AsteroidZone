@@ -10,7 +10,7 @@ if (('webkitSpeechRecognition' in window)) {
 		recognizing = true;
 	};
 
-	recognition.onerror = function(event) {
+	/*recognition.onerror = function(event) {
 		if (event.error == 'no-speech') {
 			ignore_onend = true;
 		}
@@ -22,7 +22,7 @@ if (('webkitSpeechRecognition' in window)) {
 		if (event.error == 'not-allowed') {
 			ignore_onend = true;
 		}
-	};
+	};*/
 
 	recognition.onend = function() {
 		recognizing = false;
