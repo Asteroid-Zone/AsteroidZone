@@ -1,68 +1,56 @@
-﻿var recognizing = false;
-var ignore_onend;
+﻿document.addEventListener('DOMContentLoaded', function () {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechGrammarList = window.SpeechGrammarList || window.webkitSpeechGrammarList;
 
-if (('webkitSpeechRecognition' in window)) {
-	var recognition = new webkitSpeechRecognition();
-	recognition.continuous = true;
-	recognition.interimResults = true;
+    if (!SpeechRecognition) {
+        return;
+    }
 
-	recognition.onstart = function() {
-		recognizing = true;
-	};
+    // Attach recognition object to window so that it can be accessed outside of this scope (at start and stop recognition functions called by Unity)
+    window.recognition = new SpeechRecognition();
+    const speechRecognitionList = new SpeechGrammarList();
 
-	/*recognition.onerror = function(event) {
-		if (event.error == 'no-speech') {
-			ignore_onend = true;
-		}
+    // Check https://developer.syn.co.in/tutorial/speech/jsgf-grammar.html
+    const commands = ['pirate', 'pirates', 'asteroid', 'asteroids', 'ping', 'pin', 'at', 'north', 'south', 'east', 'west', 'go', 'move', 'to', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    const grammar = `#JSGF V1.0; grammar commands; public <command> = (${commands.join(' | ')} );`;
 
-		if (event.error == 'audio-capture') {
-			ignore_onend = true;
-		}
+    speechRecognitionList.addFromString(grammar, 1);
+    recognition.grammars = speechRecognitionList;
+    recognition.continuous = true;
+    recognition.lang = 'en-Gb';
+    recognition.interimResults = true;
 
-		if (event.error == 'not-allowed') {
-			ignore_onend = true;
-		}
-	};*/
+    recognition.onresult = function (event) {
+        var interimTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            interimTranscript += event.results[i][0].transcript;
+        }
 
-	recognition.onend = function() {
-		recognizing = false;
+        unityInstance.SendMessage('CommandListener', 'GetResponse', interimTranscript);
+    }
 
-		if (ignore_onend) {
-			return;
-		}
+    recognition.onend = () => recognition.start();
 
-		//Calls the speech recognition again
-		start();
+    recognition.onnomatch = () => {
+        console.log('No match!');
+    };
+});
 
-	};
-
-	// This function is called within the Unity 3D
-	function startButtonFromUnity3D() {
-		start();
-	}
-
-	recognition.onresult = function(event) {
-		var interim_transcript = '';
-		for (var i = event.resultIndex; i < event.results.length; ++i) {
-			if (!event.results[i].isFinal) {
-				interim_transcript += event.results[i][0].transcript;
-			}
-		}
-
-		unityInstance.SendMessage('CommandListener', 'GetResponse', interim_transcript);
-	};
-
-	function start() {
-		if (recognizing) {
-			recognition.stop();
-			return;
-		}
-
-		recognition.lang = 'en-GB';
-		recognition.start();
-		ignore_onend = false;
-	}
-
+/**
+ * Called within Unity to START the voice recognition process.
+ */
+function startVoiceRecognition() {
+    if (window.recognition) {
+        recognition.start();
+    }
 }
 
-start();
+/**
+ * Called within Unity to STOP the voice recognition process.
+ */
+function stopVoiceRecognition() {
+    if (window.recognition) {
+        recognition.onend = () => { };
+        recognition.stop();
+    }
+}
