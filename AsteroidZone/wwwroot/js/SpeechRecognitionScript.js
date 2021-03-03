@@ -19,7 +19,8 @@
     recognition.continuous = true;
     recognition.lang = 'en-Gb';
     recognition.interimResults = true;
-
+    recognition.maxAlternatives = 1;
+    
     recognition.onresult = function (event) {
         var interimTranscript = '';
         for (let i = event.resultIndex; i < event.results.length; ++i) {
