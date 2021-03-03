@@ -31,6 +31,11 @@
     }
 
     recognition.onend = () => recognition.start();
+    
+    recognition.onerror = function (event) {
+        console.log("Error: " + event.message);
+        //recognition.start();
+    }
 
     recognition.onnomatch = () => {
         console.log('No match!');
