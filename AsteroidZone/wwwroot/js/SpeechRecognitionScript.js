@@ -30,11 +30,14 @@
         unityInstance.SendMessage('CommandListener', 'GetResponse', interimTranscript);
     }
 
-    recognition.onend = () => recognition.start();
+    recognition.onend = function () {
+        if (!flagStopRecognition) {
+            recognition.start();
+        }
+    }
     
     recognition.onerror = function (event) {
-        console.log("Error: " + event.message);
-        //recognition.start();
+        console.log("Error: " + event.error);
     }
 
     recognition.onnomatch = () => {
@@ -42,11 +45,15 @@
     };
 });
 
+// A flag used when the recognition should be stopped and then the onend listener should not start again
+var flagStopRecognition = false;
+
 /**
  * Called within Unity to START the voice recognition process.
  */
 function startVoiceRecognition() {
     if (window.recognition) {
+        flagStopRecognition = false;
         recognition.start();
     }
 }
@@ -56,7 +63,7 @@ function startVoiceRecognition() {
  */
 function stopVoiceRecognition() {
     if (window.recognition) {
-        recognition.onend = () => { };
+        flagStopRecognition = true;
         recognition.stop();
     }
 }
