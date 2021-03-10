@@ -5,6 +5,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Google.Cloud.Speech.V1" Version="2.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Update="wwwroot\Build\MonoBleedingEdge.data.unityweb">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Content>
