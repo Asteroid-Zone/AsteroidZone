@@ -69,7 +69,14 @@
 //}
 
 const webSocket = new WebSocket('ws://localhost/AsteroidZone/ws');
-webSocket.binaryType = 'blob';
+
+const constraints = {
+    audio: {
+        channelCount: 1,
+        sampleRate: 16000,
+        volume: 1
+    }
+}
 
 webSocket.onopen = event => {
     console.log('info: connected to server');
@@ -77,20 +84,39 @@ webSocket.onopen = event => {
     navigator.mediaDevices
         .getUserMedia({ audio: true, video: false })
         .then(stream => {
-            const mediaRecorder = new MediaRecorder(stream, {
-                mimeType: 'audio/webm',
-            });
 
-            mediaRecorder.addEventListener('dataavailable', event => {
-                if (event.data.size > 0) {
-                    webSocket.send(event.data);
-                }
-            });
+            const audioTracks = stream.getAudioTracks();
+            if (audioTracks.length !== 1) throw new Error('too many tracks');
+            const audioTrack = audioTracks[0];
+            audioTrack.applyConstraints(constraints)
+                .then(() => {
 
-            mediaRecorder.start(1000);
+                    const mediaRecorder = new MediaRecorder(stream,
+                        {
+                            mimeType: 'audio/webm',
+                        });
+
+                    mediaRecorder.addEventListener('dataavailable',
+                        event => {
+                            if (event.data.size > 0) {
+                                webSocket.send(event.data);
+                            }
+                        });
+
+                    mediaRecorder.start(500);
+
+                    setTimeout(() => {
+                        audioTrack.stop();
+                        mediaRecorder.stop();
+                        setTimeout(() => webSocket.close(), 1000);
+                    },
+                    10000);
+
+                })
+                .catch(console.error); /* you might get constraint failure here. */
         });
 };
 
 webSocket.onmessage = (event) => {
-    console.log('WebSocket message received:', event);
+    console.log('WebSocket message received:', event.data);
 }

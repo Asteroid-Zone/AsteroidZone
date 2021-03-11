@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
+using System.IO;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
@@ -82,37 +83,109 @@ namespace AsteroidZone
             });
         }
 
+        static async Task SaveMicrophoneToFile(HttpContext context, WebSocket webSocket)
+        {
+            FileStream fs = null;
+            try
+            {
+                fs = File.Create("C:\\Users\\milen\\Desktop\\test\\file.webm");
+                var buffer = new byte[1024 * 50];
+                int position = 0;
+                WebSocketReceiveResult result;
+                do
+                {
+                    result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                    fs.Write(buffer, position, result.Count);
+                    position += result.Count;
+                } while (!result.CloseStatus.HasValue);
+
+                await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription,
+                    CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            finally
+            {
+                fs?.Close();
+            }
+        }
+
         static async Task GoogleCloudVoiceRec(HttpContext context, WebSocket webSocket)
         {
-            // Create a speech client using the credentials
-            var speechBuilder = new SpeechClientBuilder
+            try
             {
-                CredentialsPath = ".\\key.json"
-            };
+                var streamingCall = await GetStartedRecognitionStream();
+
+                // Print responses as they arrive - this is supposed to be the recognised text sent back from google's servers
+                Task printResponses = SetupRecognitionResultHandler(streamingCall, webSocket);
+
+                // Create a buffer which will be used to 
+                var buffer = new byte[1024 * 64];
+
+                WebSocketReceiveResult result;
+                do
+                {
+                    // Receive bytes from the websocket and immediately transfer them to the Google Cloud recognition API stream
+                    result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+
+                    await streamingCall.WriteAsync(
+                        new StreamingRecognizeRequest
+                        {
+                            AudioContent = Google.Protobuf.ByteString
+                                .CopyFrom(buffer, 0, result.Count)
+                        });
+
+                } while (!result.CloseStatus.HasValue);
+
+                // Complete the recognition stream
+                await streamingCall.WriteCompleteAsync();
+
+                // Wait for the responses to be sent via the socket
+                await printResponses;
+
+                // Close the socket when all of the data has been taken
+                await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription,
+                    CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            
+        }
+
+        private static async Task<SpeechClient.StreamingRecognizeStream> GetStartedRecognitionStream()
+        {
+            // Create a speech client using the credentials
+            var speechBuilder = new SpeechClientBuilder { CredentialsPath = ".\\key.json" };
 
             var speech = speechBuilder.Build();
             var streamingCall = speech.StreamingRecognize();
 
             // Write the initial request with the config of the audio
             await streamingCall.WriteAsync(
-                new StreamingRecognizeRequest()
+                new StreamingRecognizeRequest
                 {
-                    StreamingConfig = new StreamingRecognitionConfig()
+                    StreamingConfig = new StreamingRecognitionConfig
                     {
-                        Config = new RecognitionConfig()
+                        Config = new RecognitionConfig
                         {
-                            Encoding =
-                            RecognitionConfig.Types.AudioEncoding.Linear16,
+                            Encoding = RecognitionConfig.Types.AudioEncoding.OggOpus,
                             SampleRateHertz = 16000,
-                            LanguageCode = "en-GB",
+                            LanguageCode = "en",
                         },
                         InterimResults = true,
                     }
                 });
 
+            return streamingCall;
+        }
 
-            // Print responses as they arrive - this is supposed to be the recognised text sent back from google's servers
-            Task printResponses = Task.Run(async () =>
+        private static Task SetupRecognitionResultHandler(SpeechClient.StreamingRecognizeStream streamingCall,WebSocket  webSocket)
+        {
+            return Task.Run(async () =>
             {
                 var responseStream = streamingCall.GetResponseStream();
                 while (await responseStream.MoveNextAsync())
@@ -124,36 +197,14 @@ namespace AsteroidZone
                         {
                             // Print the result on the console and send back via the websocket
                             Console.WriteLine(alternative.Transcript);
-                            await SendString((ClientWebSocket)webSocket, alternative.Transcript, CancellationToken.None);
+                            await SendStringToSocket(webSocket, alternative.Transcript, CancellationToken.None);
                         }
                     }
                 }
             });
-
-            // Create a buffer which will be used to 
-            var buffer = new byte[1024 * 4];
-
-            WebSocketReceiveResult result;
-            do
-            {
-                result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-
-                await streamingCall.WriteAsync(
-                    new StreamingRecognizeRequest()
-                    {
-                        AudioContent = Google.Protobuf.ByteString
-                            .CopyFrom(buffer, 0, buffer.Length),
-                    });
-            } while (!result.CloseStatus.HasValue);
-            
-            // Close the socket when all of the data has been taken
-            await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
-
-            await streamingCall.WriteCompleteAsync();
-            await printResponses;
         }
 
-        public static Task SendString(ClientWebSocket ws, string data, CancellationToken cancellation)
+        private static Task SendStringToSocket(WebSocket ws, string data, CancellationToken cancellation)
         {
             var encoded = Encoding.UTF8.GetBytes(data);
             var buffer = new ArraySegment<byte>(encoded, 0, encoded.Length);
