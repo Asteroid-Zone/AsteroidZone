@@ -68,55 +68,55 @@
 //    }
 //}
 
-const webSocket = new WebSocket('ws://localhost/AsteroidZone/ws');
+//const webSocket = new WebSocket('ws://localhost/AsteroidZone/ws');
 
-const constraints = {
-    audio: {
-        channelCount: 1,
-        sampleRate: 16000,
-        volume: 1
-    }
-}
+//const constraints = {
+//    audio: {
+//        channelCount: 1,
+//        sampleRate: 16000,
+//        volume: 1
+//    }
+//}
 
-webSocket.onopen = event => {
-    console.log('info: connected to server');
+//webSocket.onopen = event => {
+//    console.log('info: connected to server');
 
-    navigator.mediaDevices
-        .getUserMedia({ audio: true, video: false })
-        .then(stream => {
+//    navigator.mediaDevices
+//        .getUserMedia({ audio: true, video: false })
+//        .then(stream => {
 
-            const audioTracks = stream.getAudioTracks();
-            if (audioTracks.length !== 1) throw new Error('too many tracks');
-            const audioTrack = audioTracks[0];
-            audioTrack.applyConstraints(constraints)
-                .then(() => {
+//            const audioTracks = stream.getAudioTracks();
+//            if (audioTracks.length !== 1) throw new Error('too many tracks');
+//            const audioTrack = audioTracks[0];
+//            audioTrack.applyConstraints(constraints)
+//                .then(() => {
 
-                    const mediaRecorder = new MediaRecorder(stream,
-                        {
-                            mimeType: 'audio/webm',
-                        });
+//                    const mediaRecorder = new MediaRecorder(stream,
+//                        {
+//                            mimeType: 'audio/webm',
+//                        });
 
-                    mediaRecorder.addEventListener('dataavailable',
-                        event => {
-                            if (event.data.size > 0) {
-                                webSocket.send(event.data);
-                            }
-                        });
+//                    mediaRecorder.addEventListener('dataavailable',
+//                        event => {
+//                            if (event.data.size > 0) {
+//                                webSocket.send(event.data);
+//                            }
+//                        });
 
-                    mediaRecorder.start(500);
+//                    mediaRecorder.start(250);
 
-                    setTimeout(() => {
-                        audioTrack.stop();
-                        mediaRecorder.stop();
-                        setTimeout(() => webSocket.close(), 1000);
-                    },
-                    10000);
+//                    setTimeout(() => {
+//                        audioTrack.stop();
+//                        mediaRecorder.stop();
+//                        setTimeout(() => webSocket.close(), 1000);
+//                    },
+//                    20000);
 
-                })
-                .catch(console.error); /* you might get constraint failure here. */
-        });
-};
+//                })
+//                .catch(console.error); /* you might get constraint failure here. */
+//        });
+//};
 
-webSocket.onmessage = (event) => {
-    console.log('WebSocket message received:', event.data);
-}
+//webSocket.onmessage = (event) => {
+//    console.log('WebSocket message received:', event.data);
+//}

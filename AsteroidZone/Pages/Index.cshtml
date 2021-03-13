@@ -10,31 +10,56 @@
     </h1>
     <small>We hope that you will like the game.</small>
     <script>
-        // Create the web socket
-        const webSocket = new WebSocket('ws://localhost/AsteroidZone/ws');
-
-        // Print the result of a message received via the socket on the console
-        webSocket.onmessage = (event) => {
-            console.log('WebSocket message received:', event.data);
-        }
-
+        
         // Specify the config for the audio capture
         const config = {
             codec: {
                 sampleRate: 16000,
                 channels: 1,
                 app: 2048,
-                frameDuration: 10,
+                frameDuration: 60,
                 bufferSize: 4096
-            }
+            },
+            server: 'ws://localhost/AsteroidZone/ws'
         }
 
-        // Create the streamer object
-        const streamer = new WSAudioAPI.Streamer(config, webSocket);
+        function startStreaming() {
+            // Create the web socket
+            window.speechWebSocket = new WebSocket('ws://localhost/AsteroidZone/ws');
+
+            // Print the result of a message received via the socket on the console
+            window.speechWebSocket.onmessage = (event) => {
+                console.log('WebSocket message received:', event.data);
+            }
+
+            window.speechWebSocket.onclose = (event) => {
+                console.log("Speech WebSocket is closed");
+            };
+
+            // Chrome cannot create AudioContext without it being initialised by a user gesture, 
+            // but the streaming library creates such objects and they need to be resumed in order to work
+            if (audioContextHandle && audioContext) {
+                audioContextHandle.resume();
+                audioContext.resume();
+            }
+            
+            window.streamer = new WSAudioAPI.Streamer(config, window.speechWebSocket);
+            streamer.start();
+        }
+
+        function stopStreaming() {
+            if (window.streamer) {
+                window.streamer.stop();
+            }
+
+            if (window.speechWebSocket && window.speechWebSocket.readyState === WebSocket.OPEN) {
+                window.speechWebSocket.close();
+            }
+        }
     </script>
 
-    <button onclick="streamer.start()">Start stream</button>
-    <button onclick="streamer.stop()">Stop stream</button>
+    <button onclick="startStreaming()">Start stream</button>
+    <button onclick="stopStreaming()">Stop stream</button>
 </div>
 
-<!--script src="~/js/SpeechRecognitionScript.js"></script-->
+<script src="~/js/SpeechRecognitionScript.js"></script>

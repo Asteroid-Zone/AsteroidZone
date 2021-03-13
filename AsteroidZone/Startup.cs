@@ -4,7 +4,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
-using System.IO;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
@@ -83,61 +82,65 @@ namespace AsteroidZone
             });
         }
 
-        private static async Task SaveMicrophoneToFile(HttpContext context, WebSocket webSocket)
-        {
-            FileStream fs = null;
-            try
-            {
-                fs = File.Create("C:\\Users\\milen\\Desktop\\test\\file.ogg");
-                var buffer = new byte[1024 * 50];
-                int position = 0;
-                WebSocketReceiveResult result;
-                do
-                {
-                    result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-                    fs.Write(buffer, position, result.Count);
-                    position += result.Count;
-                } while (!result.CloseStatus.HasValue);
-
-                await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription,
-                    CancellationToken.None);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
-            finally
-            {
-                fs?.Close();
-            }
-        }
-
         private static async Task GoogleCloudVoiceRec(HttpContext context, WebSocket webSocket)
         {
             try
             {
-                var streamingCall = await GetStartedRecognitionStream();
+                // Create a speech client using the credentials
+                var speechBuilder = new SpeechClientBuilder { CredentialsPath = ".\\key.json" };
+                var speech = speechBuilder.Build();
+                var streamingCall = speech.StreamingRecognize();
 
-                // Print responses as they arrive - this is supposed to be the recognised text sent back from google's servers
-                Task printResponses = SetupRecognitionResultHandler(streamingCall, webSocket);
+                // Write the initial request with the config.
+                await streamingCall.WriteAsync(
+                    new StreamingRecognizeRequest()
+                    {
+                        StreamingConfig = new StreamingRecognitionConfig()
+                        {
+                            Config = new RecognitionConfig()
+                            {
+                                Encoding = RecognitionConfig.Types.AudioEncoding.OggOpus,
+                                SampleRateHertz = 16000,
+                                LanguageCode = "en",
+                                AudioChannelCount = 1
+                            },
+                            InterimResults = true
+                        }
+                    });
+
+                // Print responses as they arrive.
+                Task printResponses = Task.Run(async () =>
+                {
+                    var responseStream = streamingCall.GetResponseStream();
+                    while (await responseStream.MoveNextAsync())
+                    {
+                        StreamingRecognizeResponse response = responseStream.Current;
+                        foreach (StreamingRecognitionResult result in response.Results)
+                        {
+                            foreach (SpeechRecognitionAlternative alternative in result.Alternatives)
+                            {
+                                // Print the result on the console and send back via the websocket
+                                Console.WriteLine(alternative.Transcript);
+                                await SendStringToSocket(webSocket, alternative.Transcript, CancellationToken.None);
+                            }
+                        }
+                    }
+                });
 
                 // Create a buffer which will be used to 
-                var buffer = new byte[1024 * 64];
+                var buffer = new byte[1024];
 
-                WebSocketReceiveResult result;
-                do
+                WebSocketReceiveResult socketResult = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                while (!socketResult.CloseStatus.HasValue)
                 {
-                    // Receive bytes from the websocket and immediately transfer them to the Google Cloud recognition API stream
-                    result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-
-                    await streamingCall.WriteAsync(
+                    streamingCall.WriteAsync(
                         new StreamingRecognizeRequest
                         {
-                            AudioContent = Google.Protobuf.ByteString
-                                .CopyFrom(buffer, 0, result.Count)
-                        });
+                            AudioContent = Google.Protobuf.ByteString.CopyFrom(buffer, 0, socketResult.Count)
+                        }).Wait();
 
-                } while (!result.CloseStatus.HasValue);
+                    socketResult = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                }
 
                 // Complete the recognition stream
                 await streamingCall.WriteCompleteAsync();
@@ -146,63 +149,12 @@ namespace AsteroidZone
                 await printResponses;
 
                 // Close the socket when all of the data has been taken
-                await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription,
-                    CancellationToken.None);
+                await webSocket.CloseAsync(socketResult.CloseStatus.Value, socketResult.CloseStatusDescription, CancellationToken.None);
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
             }
-            
-        }
-
-        private static async Task<SpeechClient.StreamingRecognizeStream> GetStartedRecognitionStream()
-        {
-            // Create a speech client using the credentials
-            var speechBuilder = new SpeechClientBuilder { CredentialsPath = ".\\key.json" };
-
-            var speech = speechBuilder.Build();
-            var streamingCall = speech.StreamingRecognize();
-
-            // Write the initial request with the config of the audio
-            await streamingCall.WriteAsync(
-                new StreamingRecognizeRequest
-                {
-                    StreamingConfig = new StreamingRecognitionConfig
-                    {
-                        Config = new RecognitionConfig
-                        {
-                            Encoding = RecognitionConfig.Types.AudioEncoding.OggOpus,
-                            SampleRateHertz = 16000,
-                            LanguageCode = "en",
-                            AudioChannelCount = 1
-                        },
-                        InterimResults = true,
-                    }
-                });
-
-            return streamingCall;
-        }
-
-        private static Task SetupRecognitionResultHandler(SpeechClient.StreamingRecognizeStream streamingCall, WebSocket webSocket)
-        {
-            return Task.Run(async () =>
-            {
-                var responseStream = streamingCall.GetResponseStream();
-                while (await responseStream.MoveNextAsync())
-                {
-                    StreamingRecognizeResponse response = responseStream.Current;
-                    foreach (StreamingRecognitionResult recognitionResult in response.Results)
-                    {
-                        foreach (SpeechRecognitionAlternative alternative in recognitionResult.Alternatives)
-                        {
-                            // Print the result on the console and send back via the websocket
-                            Console.WriteLine(alternative.Transcript);
-                            await SendStringToSocket(webSocket, alternative.Transcript, CancellationToken.None);
-                        }
-                    }
-                }
-            });
         }
 
         private static Task SendStringToSocket(WebSocket ws, string data, CancellationToken cancellation)
