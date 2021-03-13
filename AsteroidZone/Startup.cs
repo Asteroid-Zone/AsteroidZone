@@ -83,12 +83,12 @@ namespace AsteroidZone
             });
         }
 
-        static async Task SaveMicrophoneToFile(HttpContext context, WebSocket webSocket)
+        private static async Task SaveMicrophoneToFile(HttpContext context, WebSocket webSocket)
         {
             FileStream fs = null;
             try
             {
-                fs = File.Create("C:\\Users\\milen\\Desktop\\test\\file.webm");
+                fs = File.Create("C:\\Users\\milen\\Desktop\\test\\file.ogg");
                 var buffer = new byte[1024 * 50];
                 int position = 0;
                 WebSocketReceiveResult result;
@@ -112,7 +112,7 @@ namespace AsteroidZone
             }
         }
 
-        static async Task GoogleCloudVoiceRec(HttpContext context, WebSocket webSocket)
+        private static async Task GoogleCloudVoiceRec(HttpContext context, WebSocket webSocket)
         {
             try
             {
@@ -175,6 +175,7 @@ namespace AsteroidZone
                             Encoding = RecognitionConfig.Types.AudioEncoding.OggOpus,
                             SampleRateHertz = 16000,
                             LanguageCode = "en",
+                            AudioChannelCount = 1
                         },
                         InterimResults = true,
                     }
@@ -183,7 +184,7 @@ namespace AsteroidZone
             return streamingCall;
         }
 
-        private static Task SetupRecognitionResultHandler(SpeechClient.StreamingRecognizeStream streamingCall,WebSocket  webSocket)
+        private static Task SetupRecognitionResultHandler(SpeechClient.StreamingRecognizeStream streamingCall, WebSocket webSocket)
         {
             return Task.Run(async () =>
             {

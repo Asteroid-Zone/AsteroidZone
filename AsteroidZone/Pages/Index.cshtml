@@ -3,12 +3,38 @@
 @{
     ViewData["Title"] = "Home page";
 }
-
+<script src="~/js/ws-audio-api.min.js"></script>
 <div class="text-center">
     <h1 class="display-4">
         Welcome to Asteroid Zone
     </h1>
     <small>We hope that you will like the game.</small>
+    <script>
+        // Create the web socket
+        const webSocket = new WebSocket('ws://localhost/AsteroidZone/ws');
+
+        // Print the result of a message received via the socket on the console
+        webSocket.onmessage = (event) => {
+            console.log('WebSocket message received:', event.data);
+        }
+
+        // Specify the config for the audio capture
+        const config = {
+            codec: {
+                sampleRate: 16000,
+                channels: 1,
+                app: 2048,
+                frameDuration: 10,
+                bufferSize: 4096
+            }
+        }
+
+        // Create the streamer object
+        const streamer = new WSAudioAPI.Streamer(config, webSocket);
+    </script>
+
+    <button onclick="streamer.start()">Start stream</button>
+    <button onclick="streamer.stop()">Stop stream</button>
 </div>
 
-<script src="AsteroidZone/js/SpeechRecognitionScript.js"></script>
+<!--script src="~/js/SpeechRecognitionScript.js"></script-->
