@@ -88,7 +88,7 @@ namespace AsteroidZone
             try
             {
                 // Create a speech client using the credentials
-                var speechBuilder = new SpeechClientBuilder { CredentialsPath = ".\\key.json" };
+                var speechBuilder = new SpeechClientBuilder { JsonCredentials = Credentials };
                 var speech = speechBuilder.Build();
                 var streamingCall = speech.StreamingRecognize();
 
@@ -163,5 +163,18 @@ namespace AsteroidZone
             var buffer = new ArraySegment<byte>(encoded, 0, encoded.Length);
             return ws.SendAsync(buffer, WebSocketMessageType.Text, true, cancellation);
         }
+
+        private const string Credentials = @"{
+          ""type"": ""service_account"",
+          ""project_id"": ""asteroidzone"",
+          ""private_key_id"": ""e264a3e5a1310d94cb082087c4a3891c733d11c5"",
+          ""private_key"": ""-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCJoXq1u9IrjLIo\nBjow9lefYsdlGVYB2a4DyasTbTSxx4/SUd1SfpCBRfF6hQwfIO9XeANR2Adva9jw\nirlxf2mAGzyAgRXR2Vu6b9Yl3byqHleH9DAKlXDFF8IV9shV5NUZrtbHqyM9pNJS\nJXgpJowTFqJAAxG/3l6sAybx3gkJbGcY5u1MC8tEVTalD0y7xJUxgdp7qmG6Qmkf\nir8YTpOse8l7x+AfUoD+Os4h95jYmZNMwDlV+yxW5sPD5vlZgdbxMvmoVImwGBHm\nP5Vzvn3FsSHG2C1WcJDmMDOZKMov94uvqNqu41Cz0UEBAEAzezQ4AOLRvSV2pIIN\niqOVz2qLAgMBAAECggEALYqnhjdORmbaFPBqlQUO3YjcHhISKa6ULGCxIU6Dn0g/\nyQKZz9BdlMlGLJqV9j75s+Hch1qKq03ujTn6PxpAGMnqbUNJqxTXi4uyOvlykoBT\nyoL82qO0myNPb+EnTXTZJxR5sbxpft5pUhFf/43nz/EvYysg1nKItTadzm8AYoNm\nJGrWSq7md1NPXwI8WGLQ2/HFXKwzuZSzw4UV/QiV04UxQTPKbw+aXZF7NiDH6Gen\nUSfBYSWTnfN2jL3wt/dCoarNJZE3OX71VMd9jrRNL3FxxbCtitK/oxBDbgnxO1M+\nwh7kzN8VF9uRs3FmE4OfMTmAfY1hKBvPdGdLh3DisQKBgQC+xcy9XNtNhVajaFqy\n300Rbe30UFB6JG/9ksHfp72ix0jshwkKj7/G/JqXVP1GOHrQ7he/o1WVldjLERiK\nWZyqtecioI50tj/wR+OJ7ybhYnpv0oq5oR3JwTOvXDQWR0txYJE7I6rriWUHxwSt\nKeek9H61MHugoBr1FhKrojXIDQKBgQC4sDUYDAbCYHa9hLIzUSHeG/0WqI7/hy3M\nInXLy4cP3re0rFiDmfwOZa+BArauN5ThwthTcIE4jpaAHw0TlXyNF151WkkPKNlZ\naVKMx1y0u2+Ib1/mdRPycmdeRSflr9CCCKssSLaQ2y5G4nLVKEvTM9LPCXh/XdtQ\n8sLuHwl+9wKBgEJKT2O5wYbFf56Wo3WmfIxC673KrrxSrwupFG9YRWAr6Z4vKige\nXWCS5FETulLNS3gQU/ZGlnW9NTETBrkEfJkhTmjM69OIhN1Ezb9fd943rx3uRkBM\nySITXZdg7cSUD5YdHTo0oa7o9k9mi6x0dEbwoprpdvwQxm1Ft0Umv5N9AoGAHBUG\n7bIecP3T8Ds2EWF7wdcFo6VboPT//LMcsDExRzN5QWqXRuNqFRJXHkm4V0MySyWi\nWQWZUG016yNNjLXFK3rrLPLeewSeD99Y4vkJWp3Jdrhgn50bvFiy6P2g9GbIUI1a\n4a/oupvpLHQQO+MVrHaLzllFTjCKQYO4KhbkDb8CgYANQ0bRC/L47TV4nH+ummWG\nPLYtf7IClQqbLyvRSbw0uIidv7fE4zTcn1xwCTDFbsPnh7L6AniIFHeEVAgNTecK\ny/NwYpR+c4pi7HLi/m7hmFjo2bxjELs+afZo+xZo0Hb1YR0lgNDgUW8j3BH76dwA\nHOKz6l8ixG07A3XP7ORsSw==\n-----END PRIVATE KEY-----\n"",
+          ""client_email"": ""my-speech-to-text-sa@asteroidzone.iam.gserviceaccount.com"",
+          ""client_id"": ""107057819689325340513"",
+          ""auth_uri"": ""https://accounts.google.com/o/oauth2/auth"",
+          ""token_uri"": ""https://oauth2.googleapis.com/token"",
+          ""auth_provider_x509_cert_url"": ""https://www.googleapis.com/oauth2/v1/certs"",
+          ""client_x509_cert_url"": ""https://www.googleapis.com/robot/v1/metadata/x509/my-speech-to-text-sa%40asteroidzone.iam.gserviceaccount.com""
+        }";
     }
 }
