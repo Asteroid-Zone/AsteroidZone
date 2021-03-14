@@ -69,8 +69,8 @@
 //}
 
 function startVoiceRecognition() {
-    window.recognitionWebSocket = new WebSocket(`wss://${window.location.hostname}/ws`);
-    //window.recognitionWebSocket = new WebSocket(`ws://localhost/AsteroidZone/ws`);
+    const urlArr = window.location.href.split("/");
+    window.recognitionWebSocket = new WebSocket(`wss://${urlArr[2]}/ws`);
     window.recognitionWebSocket.onmessage = (event) => {
         if (typeof unityInstance === 'undefined') {
             console.log(event.data);
