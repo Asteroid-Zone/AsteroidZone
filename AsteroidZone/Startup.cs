@@ -83,37 +83,6 @@ namespace AsteroidZone
             });
         }
 
-        private static async Task SaveMicrophoneToFile(HttpContext context, WebSocket webSocket)
-        {
-            FileStream fs = null;
-            try
-            {
-                var buffer = new byte[1024 * 256];
-                int position = 0;
-                WebSocketReceiveResult result;
-                do
-                {
-                    fs?.Close();
-
-                    fs = File.Create($"C:\\Users\\milen\\Desktop\\test\\file{position}.webm");
-                    result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-                    fs.Write(buffer, 0, result.Count);
-                    position ++;
-                } while (!result.CloseStatus.HasValue);
-
-                await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription,
-                    CancellationToken.None);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
-            finally
-            {
-                fs?.Close();
-            }
-        }
-
         private static async Task GoogleCloudVoiceRec(HttpContext context, WebSocket webSocket)
         {
             try
@@ -132,8 +101,8 @@ namespace AsteroidZone
                             Config = new RecognitionConfig()
                             {
                                 Encoding = RecognitionConfig.Types.AudioEncoding.Linear16,
-                                SampleRateHertz = 16000,
-                                LanguageCode = "en-GB",
+                                SampleRateHertz = 44100,
+                                LanguageCode = "en",
                                 AudioChannelCount = 1
                             },
                             InterimResults = true
@@ -152,7 +121,6 @@ namespace AsteroidZone
                             foreach (SpeechRecognitionAlternative alternative in result.Alternatives)
                             {
                                 // Print the result on the console and send back via the websocket
-                                Console.WriteLine(alternative.Transcript);
                                 await SendStringToSocket(webSocket, alternative.Transcript, CancellationToken.None);
                             }
                         }
@@ -165,11 +133,11 @@ namespace AsteroidZone
                 WebSocketReceiveResult socketResult = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
                 while (!socketResult.CloseStatus.HasValue)
                 {
-                    streamingCall.WriteAsync(
+                    await streamingCall.WriteAsync(
                         new StreamingRecognizeRequest
                         {
                             AudioContent = Google.Protobuf.ByteString.CopyFrom(buffer, 0, socketResult.Count)
-                        }).Wait();
+                        });
 
                     socketResult = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
                 }

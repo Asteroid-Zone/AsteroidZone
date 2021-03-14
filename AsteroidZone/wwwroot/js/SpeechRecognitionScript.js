@@ -20,7 +20,7 @@
 //    recognition.lang = 'en-Gb';
 //    recognition.interimResults = true;
 //    recognition.maxAlternatives = 1;
-    
+
 //    recognition.onresult = function (event) {
 //        var interimTranscript = '';
 //        for (let i = event.resultIndex; i < event.results.length; ++i) {
@@ -35,7 +35,7 @@
 //            recognition.start();
 //        }
 //    }
-    
+
 //    recognition.onerror = function (event) {
 //        console.log("Error: " + event.error);
 //    }
@@ -68,55 +68,67 @@
 //    }
 //}
 
-//const webSocket = new WebSocket('ws://localhost/AsteroidZone/ws');
+function startVoiceRecognition() {
+    window.recognitionWebSocket = new WebSocket(`wss://${window.location.hostname}/ws`);
+    //window.recognitionWebSocket = new WebSocket(`ws://localhost/AsteroidZone/ws`);
+    window.recognitionWebSocket.onmessage = (event) => {
+        if (typeof unityInstance === 'undefined') {
+            console.log(event.data);
+        } else {
+            unityInstance.SendMessage('CommandListener', 'GetResponse', event.data);
+        }
+    }
 
-//const constraints = {
-//    audio: {
-//        channelCount: 1,
-//        sampleRate: 16000,
-//        volume: 1
-//    }
-//}
 
-//webSocket.onopen = event => {
-//    console.log('info: connected to server');
+    navigator.getUserMedia({
+            audio: true
+        },
+        function(stream) {
+            window.voiceRecStreeam = stream;
+            window.recordAudio = RecordRTC(stream,
+                {
+                    type: 'audio',
+                    mimeType: 'audio/webm',
+                    sampleRate: 16000,
+                    desiredSampRate: 44100,
 
-//    navigator.mediaDevices
-//        .getUserMedia({ audio: true, video: false })
-//        .then(stream => {
+                    recorderType: StereoAudioRecorder,
+                    numberOfAudioChannels: 1,
 
-//            const audioTracks = stream.getAudioTracks();
-//            if (audioTracks.length !== 1) throw new Error('too many tracks');
-//            const audioTrack = audioTracks[0];
-//            audioTrack.applyConstraints(constraints)
-//                .then(() => {
 
-//                    const mediaRecorder = new MediaRecorder(stream,
-//                        {
-//                            mimeType: 'audio/webm',
-//                        });
+                    //1)
+                    // get intervals based blobs
+                    // value in milliseconds
+                    // as you might not want to make detect calls every seconds
+                    timeSlice: 500,
 
-//                    mediaRecorder.addEventListener('dataavailable',
-//                        event => {
-//                            if (event.data.size > 0) {
-//                                webSocket.send(event.data);
-//                            }
-//                        });
+                    //2)
+                    // as soon as the stream is available
+                    ondataavailable: function(blob) {
+                        window.recognitionWebSocket.send(blob);
+                    }
+                });
+            
+            window.recordAudio.startRecording();
+        },
+        function(error) {
+            console.error(JSON.stringify(error));
+        });
+};
 
-//                    mediaRecorder.start(250);
+function stopVoiceRecognition() {
+    if (window.voiceRecStreeam) {
+        window.voiceRecStreeam.getTracks().forEach(function (track) {
+            track.stop();
+        });
+    }
 
-//                    setTimeout(() => {
-//                        audioTrack.stop();
-//                        mediaRecorder.stop();
-//                        setTimeout(() => webSocket.close(), 1000);
-//                    },
-//                    20000);
+    if (window.recordAudio) {
+        window.recordAudio.stopRecording();
+        window.recordAudio.destroy();
+    }
 
-//                })
-//                .catch(console.error); /* you might get constraint failure here. */
-//        });
-//};
-
-//webSocket.onmessage = (event) => {
-//    console.log('WebSocket message received:', event.data);
-//}
+    if (window.recognitionWebSocket && window.recognitionWebSocket.readyState === WebSocket.OPEN) {
+        window.recognitionWebSocket.close();
+    }
+}
