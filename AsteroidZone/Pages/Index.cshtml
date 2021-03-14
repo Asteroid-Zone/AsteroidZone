@@ -3,63 +3,68 @@
 @{
     ViewData["Title"] = "Home page";
 }
-<script src="~/js/ws-audio-api.min.js"></script>
+<script src="https://www.WebRTC-Experiment.com/RecordRTC.js"></script>
+<script src="~/js/SpeechRecognitionScript.js"></script>
 <div class="text-center">
     <h1 class="display-4">
         Welcome to Asteroid Zone
     </h1>
     <small>We hope that you will like the game.</small>
-    <script>
-        
-        // Specify the config for the audio capture
-        const config = {
-            codec: {
-                sampleRate: 16000,
-                channels: 1,
-                app: 2048,
-                frameDuration: 60,
-                bufferSize: 4096
-            },
-            server: 'ws://localhost/AsteroidZone/ws'
-        }
+    <button id="start-recording" disabled>Start Streaming</button>
+    <button id="stop-recording" disabled>Stop Streaming</button>
+    <script type="text/javascript">
+        const startRecording = document.getElementById('start-recording');
+        startRecording.disabled = false;
+        const stopRecording = document.getElementById('stop-recording');
+        let recordAudio;
 
-        function startStreaming() {
-            // Create the web socket
-            window.speechWebSocket = new WebSocket('ws://localhost/AsteroidZone/ws');
-
-            // Print the result of a message received via the socket on the console
-            window.speechWebSocket.onmessage = (event) => {
+        startRecording.onclick = function () {
+            document.webSocket = new WebSocket('ws://localhost/AsteroidZone/ws');
+            document.webSocket.onmessage = (event) => {
                 console.log('WebSocket message received:', event.data);
             }
 
-            window.speechWebSocket.onclose = (event) => {
-                console.log("Speech WebSocket is closed");
-            };
+            startRecording.disabled = true;
 
-            // Chrome cannot create AudioContext without it being initialised by a user gesture, 
-            // but the streaming library creates such objects and they need to be resumed in order to work
-            if (audioContextHandle && audioContext) {
-                audioContextHandle.resume();
-                audioContext.resume();
-            }
-            
-            window.streamer = new WSAudioAPI.Streamer(config, window.speechWebSocket);
-            streamer.start();
-        }
+            navigator.getUserMedia({
+                audio: true
+            }, function (stream) {
+                recordAudio = RecordRTC(stream, {
+                    type: 'audio',
+                    mimeType: 'audio/webm',
+                    sampleRate: 16000,
+                    desiredSampRate: 16000,
 
-        function stopStreaming() {
-            if (window.streamer) {
-                window.streamer.stop();
-            }
+                    recorderType: StereoAudioRecorder,
+                    numberOfAudioChannels: 1,
 
-            if (window.speechWebSocket && window.speechWebSocket.readyState === WebSocket.OPEN) {
-                window.speechWebSocket.close();
-            }
-        }
+
+                    //1)
+                    // get intervals based blobs
+                    // value in milliseconds
+                    // as you might not want to make detect calls every seconds
+                    timeSlice: 500,
+
+                    //2)
+                    // as soon as the stream is available
+                    ondataavailable: function (blob) {
+                        document.webSocket.send(blob);
+                    }
+                });
+
+                recordAudio.startRecording();
+                stopRecording.disabled = false;
+            }, function (error) {
+                console.error(JSON.stringify(error));
+            });
+        };
+
+        // 4)
+        // on stop button handler
+        stopRecording.onclick = function () {
+            // recording stopped
+            startRecording.disabled = false;
+            stopRecording.disabled = true;
+        };
     </script>
-
-    <button onclick="startStreaming()">Start stream</button>
-    <button onclick="stopStreaming()">Stop stream</button>
 </div>
-
-<script src="~/js/SpeechRecognitionScript.js"></script>

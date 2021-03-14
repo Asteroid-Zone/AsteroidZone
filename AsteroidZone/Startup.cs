@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
+using System.IO;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
@@ -82,6 +83,37 @@ namespace AsteroidZone
             });
         }
 
+        private static async Task SaveMicrophoneToFile(HttpContext context, WebSocket webSocket)
+        {
+            FileStream fs = null;
+            try
+            {
+                var buffer = new byte[1024 * 256];
+                int position = 0;
+                WebSocketReceiveResult result;
+                do
+                {
+                    fs?.Close();
+
+                    fs = File.Create($"C:\\Users\\milen\\Desktop\\test\\file{position}.webm");
+                    result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                    fs.Write(buffer, 0, result.Count);
+                    position ++;
+                } while (!result.CloseStatus.HasValue);
+
+                await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription,
+                    CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            finally
+            {
+                fs?.Close();
+            }
+        }
+
         private static async Task GoogleCloudVoiceRec(HttpContext context, WebSocket webSocket)
         {
             try
@@ -99,9 +131,9 @@ namespace AsteroidZone
                         {
                             Config = new RecognitionConfig()
                             {
-                                Encoding = RecognitionConfig.Types.AudioEncoding.OggOpus,
+                                Encoding = RecognitionConfig.Types.AudioEncoding.Linear16,
                                 SampleRateHertz = 16000,
-                                LanguageCode = "en",
+                                LanguageCode = "en-GB",
                                 AudioChannelCount = 1
                             },
                             InterimResults = true
@@ -128,7 +160,7 @@ namespace AsteroidZone
                 });
 
                 // Create a buffer which will be used to 
-                var buffer = new byte[1024];
+                var buffer = new byte[32 * 1024];
 
                 WebSocketReceiveResult socketResult = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
                 while (!socketResult.CloseStatus.HasValue)
