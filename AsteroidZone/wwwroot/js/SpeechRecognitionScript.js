@@ -68,15 +68,19 @@
 //    }
 //}
 
+readTextToSpeech("Did you mean 'move forward'?")
+
 function readTextToSpeech(phrase) {
-    var msg = new SpeechSynthesisUtterance();
-    msg.text = phrase;
-    msg.lang = 'en-US';
-    msg.volume = 1;
-    msg.rate = 1;
-    msg.pitch = 1.5;
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(msg);
+    if ('speechSynthesis' in window) {
+        var msg = new SpeechSynthesisUtterance();
+        msg.text = phrase;
+        msg.lang = 'en';
+        msg.volume = 1;
+        msg.rate = 1;
+        msg.pitch = 1;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(msg);
+    }
 }
 
 function startVoiceRecognition() {
