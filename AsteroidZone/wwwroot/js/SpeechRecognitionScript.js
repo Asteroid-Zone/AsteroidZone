@@ -68,6 +68,17 @@
 //    }
 //}
 
+function readTextToSpeech(phrase) {
+    var msg = new SpeechSynthesisUtterance();
+    msg.text = phrase;
+    msg.lang = 'en-US';
+    msg.volume = 1;
+    msg.rate = 1;
+    msg.pitch = 1.5;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(msg);
+}
+
 function startVoiceRecognition() {
     const urlArr = window.location.href.split("/");
     window.recognitionWebSocket = new WebSocket(`wss://${urlArr[2]}/ws`);
