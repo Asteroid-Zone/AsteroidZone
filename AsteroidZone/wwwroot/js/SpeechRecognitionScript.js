@@ -68,8 +68,6 @@
 //    }
 //}
 
-readTextToSpeech("Did you mean 'move forward'?")
-
 function readTextToSpeech(phrase) {
     if ('speechSynthesis' in window) {
         var msg = new SpeechSynthesisUtterance();
