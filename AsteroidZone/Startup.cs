@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.WebSockets;
 using System.Text;
@@ -93,18 +94,24 @@ namespace AsteroidZone
                 var streamingCall = speech.StreamingRecognize();
 
                 // Write the initial request with the config.
+                var speechContext = new SpeechContext
+                {
+                    Phrases = { Phrases }
+                };
+                var speechConfig = new RecognitionConfig
+                {
+                    Encoding = RecognitionConfig.Types.AudioEncoding.Linear16,
+                    SampleRateHertz = 16000,
+                    LanguageCode = "en",
+                    SpeechContexts = { speechContext }
+                };
+
                 await streamingCall.WriteAsync(
-                    new StreamingRecognizeRequest()
+                    new StreamingRecognizeRequest
                     {
-                        StreamingConfig = new StreamingRecognitionConfig()
+                        StreamingConfig = new StreamingRecognitionConfig
                         {
-                            Config = new RecognitionConfig()
-                            {
-                                Encoding = RecognitionConfig.Types.AudioEncoding.Linear16,
-                                SampleRateHertz = 44100,
-                                LanguageCode = "en",
-                                AudioChannelCount = 1
-                            },
+                            Config = speechConfig,
                             InterimResults = true
                         }
                     });
@@ -176,5 +183,15 @@ namespace AsteroidZone
           ""auth_provider_x509_cert_url"": ""https://www.googleapis.com/oauth2/v1/certs"",
           ""client_x509_cert_url"": ""https://www.googleapis.com/robot/v1/metadata/x509/my-speech-to-text-sa%40asteroidzone.iam.gserviceaccount.com""
         }";
+
+        public static readonly List<string> Phrases = new List<string>
+        {
+            "north",
+            "south",
+            "east",
+            "west",
+            "go",
+            "move"
+        };
     }
 }

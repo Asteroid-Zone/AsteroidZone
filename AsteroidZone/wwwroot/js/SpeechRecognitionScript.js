@@ -89,7 +89,7 @@ function startVoiceRecognition() {
                 {
                     type: 'audio',
                     mimeType: 'audio/webm',
-                    desiredSampRate: 44100,
+                    desiredSampRate: 16000,
 
                     recorderType: StereoAudioRecorder,
                     numberOfAudioChannels: 1,
