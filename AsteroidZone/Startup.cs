@@ -102,6 +102,7 @@ namespace AsteroidZone
                 {
                     Encoding = RecognitionConfig.Types.AudioEncoding.Linear16,
                     SampleRateHertz = 16000,
+                    AudioChannelCount = 1,
                     LanguageCode = "en",
                     SpeechContexts = { speechContext }
                 };
@@ -135,16 +136,16 @@ namespace AsteroidZone
                 });
 
                 // Create a buffer which will be used to 
-                var buffer = new byte[32 * 1024];
+                var buffer = new byte[128 * 1024];
 
                 WebSocketReceiveResult socketResult = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
                 while (!socketResult.CloseStatus.HasValue)
                 {
-                    await streamingCall.WriteAsync(
+                    streamingCall.WriteAsync(
                         new StreamingRecognizeRequest
                         {
                             AudioContent = Google.Protobuf.ByteString.CopyFrom(buffer, 0, socketResult.Count)
-                        });
+                        }).Wait();
 
                     socketResult = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
                 }
