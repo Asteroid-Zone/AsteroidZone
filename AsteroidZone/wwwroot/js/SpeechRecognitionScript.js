@@ -2,26 +2,7 @@
  * Checks if the current browser is Google Chrome
  */
 function isChrome() {
-    var isChromium = window.chrome;
-    var winNav = window.navigator;
-    var vendorName = winNav.vendor;
-    var isOpera = typeof window.opr !== "undefined";
-    var isIEedge = winNav.userAgent.indexOf("Edge") > -1;
-    var isIOSChrome = winNav.userAgent.match("CriOS");
-
-    if (isIOSChrome) {
-        return true;
-    } else if (
-        isChromium !== null &&
-            typeof isChromium !== "undefined" &&
-            vendorName === "Google Inc." &&
-            isOpera === false &&
-            isIEedge === false
-    ) {
-        return true;
-    } else {
-        return false;
-    }
+    return new UAParser().getResult().browser.name.includes("Chrome");
 }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -84,8 +65,10 @@ var flagStopRecognition = false;
 function startVoiceRecognition() {
     if (isChrome()) {
         startChromeVoiceRecognition();
+        console.log("Chrome Voice Rec started");
     } else {
         startNonChromeVoiceRecognition();
+        console.log("NON Chrome Voice Rec started");
     }
 }
 
@@ -152,7 +135,7 @@ function startNonChromeVoiceRecognition() {
                     // get intervals based blobs
                     // value in milliseconds
                     // as you might not want to make detect calls every seconds
-                    timeSlice: 500,
+                    timeSlice: 100,
 
                     //2)
                     // as soon as the stream is available
