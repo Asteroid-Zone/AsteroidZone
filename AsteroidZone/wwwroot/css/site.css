@@ -1,5 +1,15 @@
 ﻿/* Please see documentation at https://docs.microsoft.com/aspnet/core/client-side/bundling-and-minification
 for details on configuring this project to bundle and minify static web assets. */
+@font-face {
+    font-family: 'SpaceFont'; /*a name to be used later*/
+    src: url('../font/SpaceFont.ttf'); /*URL to font*/
+}
+
+.space-font {
+    font-family: 'SpaceFont', cursive;
+    font-style: italic;
+}
+
 .navbar {
     padding: 5px !important;
 }
@@ -8,7 +18,7 @@ a.navbar-brand {
     white-space: normal;
     text-align: center;
     word-break: break-all;
-    font-family: 'Permanent Marker', cursive;
+    font-family: 'SpaceFont', cursive;
     font-weight: 400;
     font-style: italic;
     font-size: 25pt;
@@ -16,10 +26,18 @@ a.navbar-brand {
 }
 
 h1 {
-    font-family: 'Permanent Marker', cursive;
+    font-family: 'Oleo Script', cursive;
     font-weight: 400;
-    font-style: italic;
     color: lightgoldenrodyellow;
+}
+
+h2, h3, h4, h5, h6 {
+    font-family: 'Oleo Script', cursive;
+}
+
+.nav-link {
+    font-size: 20pt;
+    font-family: 'SpaceFont', cursive;
 }
 
 /* Provide sufficient contrast against white background */
@@ -71,7 +89,8 @@ body {
     margin-bottom: 60px;
     background-color: dimgray;
     color: lightcyan;
-    font-family: 'Oleo Script', cursive;
+    font-family: 'Quicksand', cursive;
+    font-weight: 400
 }
 
 .footer {
@@ -82,5 +101,7 @@ body {
     line-height: 60px; /* Vertically center the text there */
     font-size: 22pt;
     color: aliceblue;
+    font-family: 'SpaceFont', cursive;
+    background-color:
 }
 

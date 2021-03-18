@@ -94,7 +94,6 @@ namespace AsteroidZone
                 var speechBuilder = new SpeechClientBuilder { JsonCredentials = Credentials };
                 var speech = speechBuilder.Build();
                 var streamingCall = speech.StreamingRecognize();
-
                 // Write the initial request with the config.
                 var speechContext = new SpeechContext
                 {
@@ -194,7 +193,10 @@ namespace AsteroidZone
             "east",
             "west",
             "go",
-            "move"
+            "move",
+            "left",
+            "right",
+
         };
     }
 }

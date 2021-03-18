@@ -6,25 +6,23 @@
 }
 
 .buttonHolder a {
-    width: 100%;
-    max-width: 240px;
+    width: 350px;
     padding: 8px;
-    font-size: 1rem;
-    font-weight: 900;
-    color: #660000;
+    font-size: 1.3rem;
     text-align: center;
     text-transform: uppercase;
     text-decoration: none;
     box-shadow: 0 0 0 1px inset rgba(236, 232, 225, 0.3);
     position: relative;
     margin: 10px 0;
+    font-family: 'SpaceFont', cursive;
 }
 
 .buttonHolder a.white:hover > p { color: #ece8e1; }
 
 .buttonHolder a.white > p {
     background: #ece8e1;
-    color: #0f1923;
+    color: #660000;
 }
 
 .buttonHolder a.white > p span.base { border: 1px solid transparent; }
