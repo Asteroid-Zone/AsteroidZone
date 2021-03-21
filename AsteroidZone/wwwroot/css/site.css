@@ -40,6 +40,11 @@ h2, h3, h4, h5, h6 {
     font-family: 'SpaceFont', cursive;
 }
 
+.home-hr {
+    border: 2px solid lightgoldenrodyellow;
+    border-radius: 2px;
+}
+
 /* Provide sufficient contrast against white background */
 
 a { color: lightblue; }

@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 
-namespace AsteroidZone
+namespace AsteroidZone.Middleware
 {
     public static class ReverseProxyHttpsEnforcerExtensions
     {
