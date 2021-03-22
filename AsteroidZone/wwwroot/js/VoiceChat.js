@@ -58,7 +58,7 @@ function startVoiceStream() {
                 {
                     type: 'audio',
                     mimeType: 'audio/wav',
-                    desiredSampRate: 2500,
+                    desiredSampRate: 10000,
 
                     recorderType: StereoAudioRecorder,
                     numberOfAudioChannels: 1,
@@ -68,7 +68,7 @@ function startVoiceStream() {
                     // get intervals based blobs
                     // value in milliseconds
                     // as you might not want to make detect calls every seconds
-                    timeSlice: 300,
+                    timeSlice: 10,
 
                     //2)
                     // as soon as the stream is available
