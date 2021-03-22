@@ -106,7 +106,7 @@ function stopChromeVoiceRecognition() {
 
 function startNonChromeVoiceRecognition() {
     const urlArr = window.location.href.split("/");
-    window.recognitionWebSocket = new WebSocket(`wss://${urlArr[2]}/ws`);
+    window.recognitionWebSocket = new WebSocket(`wss://${urlArr[2]}/ws_vr`);
     window.recognitionWebSocket.onmessage = (event) => {
         if (typeof unityInstance === 'undefined') {
             console.log(event.data);
@@ -120,7 +120,7 @@ function startNonChromeVoiceRecognition() {
             audio: true
         },
         function(stream) {
-            window.voiceRecStreeam = stream;
+            window.voiceRecStream = stream;
             window.recordAudio = RecordRTC(stream,
                 {
                     type: 'audio',
@@ -152,8 +152,8 @@ function startNonChromeVoiceRecognition() {
 };
 
 function stopNonChromeVoiceRecognition() {
-    if (window.voiceRecStreeam) {
-        window.voiceRecStreeam.getTracks().forEach(function (track) {
+    if (window.voiceRecStream) {
+        window.voiceRecStream.getTracks().forEach(function (track) {
             track.stop();
         });
     }

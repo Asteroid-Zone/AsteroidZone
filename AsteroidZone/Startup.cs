@@ -58,13 +58,27 @@ namespace AsteroidZone
             app.UseWebSockets();
             app.Use(async (context, next) =>
             {
-                if (context.Request.Path == "/ws")
+                if (context.Request.Path == "/ws_vr")
                 {
                     if (context.WebSockets.IsWebSocketRequest)
                     {
                         using (WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync())
                         {
                             await GoogleCloudVoiceRec(context, webSocket);
+                        }
+                    }
+                    else
+                    {
+                        context.Response.StatusCode = 400;
+                    }
+                }
+                else if (context.Request.Path == "/ws_chat")
+                {
+                    if (context.WebSockets.IsWebSocketRequest)
+                    {
+                        using (WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync())
+                        {
+                            await Echo(context, webSocket);
                         }
                     }
                     else
@@ -85,6 +99,19 @@ namespace AsteroidZone
             {
                 endpoints.MapRazorPages();
             });
+        }
+
+        private async Task Echo(HttpContext context, WebSocket webSocket)
+        {
+            var buffer = new byte[1024 * 4];
+            WebSocketReceiveResult result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+            while (!result.CloseStatus.HasValue)
+            {
+                await webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, result.Count), result.MessageType, result.EndOfMessage, CancellationToken.None);
+
+                result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+            }
+            await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
         }
 
         private static async Task GoogleCloudVoiceRec(HttpContext context, WebSocket webSocket)

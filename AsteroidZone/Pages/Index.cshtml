@@ -3,10 +3,16 @@
 @{
     ViewData["Title"] = "Home page";
 }
+<script src="~/js/VoiceChat.js"></script>
 <div class="text-center">
     <h1 class="display-4">
         Welcome to <a class="space-font">AsteroidZone</a>
     </h1>
+    <input type="button" id="listen-btn" value="Start" onclick="startVoiceStream()"/>
+    <input type="button" id="stream-btn" value="Stop" onclick="stopVoiceStream()"/>
+    <script>
+
+    </script>
     <hr class="home-hr"/>
     <h4>Concept</h4>
     <p>
