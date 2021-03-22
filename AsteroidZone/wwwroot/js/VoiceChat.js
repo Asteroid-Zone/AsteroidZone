@@ -1,6 +1,5 @@
 ﻿var context; // Audio context
 var buf; // Audio buffer
-var fileReader;
 
 (function() {
     if (!window.AudioContext) {
@@ -12,14 +11,13 @@ var fileReader;
     }
 
     context = new AudioContext();
-
-    fileReader = new FileReader();
-    fileReader.onload = function() {
-        window.audioArray = this.result;
-    };
 })();
 
 function playByteArray(blob) {
+    const fileReader = new FileReader();
+    fileReader.onload = function () {
+        window.audioArray = this.result;
+    };
     fileReader.readAsArrayBuffer(blob);
     if (typeof window.audioArray === 'undefined') {
         return;
@@ -29,8 +27,7 @@ function playByteArray(blob) {
         function(buffer) {
             buf = buffer;
             play();
-        },
-        () => {});
+        }).catch(err => console.log(err));
 }
 
 // Play the loaded file
@@ -47,11 +44,10 @@ function play() {
 
 function startVoiceStream() {
     const urlArr = window.location.href.split("/");
-    window.recognitionWebSocket = new WebSocket(`wss://${urlArr[2]}/ws_chat`);
-    window.recognitionWebSocket.onmessage = (event) => {
+    window.chatWebSocket = new WebSocket(`wss://${urlArr[2]}/ws_chat`);
+    window.chatWebSocket.onmessage = (event) => {
         playByteArray(event.data);
     }
-
 
     navigator.getUserMedia({
             audio: true
@@ -76,8 +72,10 @@ function startVoiceStream() {
 
                     //2)
                     // as soon as the stream is available
-                    ondataavailable: function(blob) {
-                        window.recognitionWebSocket.send(blob);
+                    ondataavailable: function (blob) {
+                        if (window.chatWebSocket.readyState === WebSocket.OPEN) {
+                            window.chatWebSocket.send(blob);
+                        }
                     }
                 });
 
@@ -100,7 +98,13 @@ function stopVoiceStream() {
         window.recordAudio.destroy();
     }
 
-    if (window.recognitionWebSocket && window.recognitionWebSocket.readyState === WebSocket.OPEN) {
-        window.recognitionWebSocket.close();
+    if (window.chatWebSocket && window.chatWebSocket.readyState === WebSocket.OPEN) {
+        window.chatWebSocket.close();
     }
 }
+
+$(window).on('beforeunload', function () {
+    if (typeof window.chatWebSocket !== 'undefined' && window.chatWebSocket.readyState === WebSocket.OPEN) {
+        window.chatWebSocket.close();
+    }
+});

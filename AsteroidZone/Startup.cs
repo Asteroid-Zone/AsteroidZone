@@ -80,9 +80,15 @@ namespace AsteroidZone
                     {
                         using (WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync())
                         {
-                            ChatSockets.Add(webSocket);
-                            await SendOthers(context, webSocket);
-                            ChatSockets.Remove(webSocket);
+                            try
+                            {
+                                ChatSockets.Add(webSocket);
+                                await SendOthers(context, webSocket);
+                            }
+                            finally
+                            {
+                                ChatSockets.Remove(webSocket);
+                            }
                         }
                     }
                     else
