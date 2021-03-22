@@ -57,8 +57,8 @@ function startVoiceStream() {
             window.recordAudio = RecordRTC(stream,
                 {
                     type: 'audio',
-                    mimeType: 'audio/webm',
-                    desiredSampRate: 16000,
+                    mimeType: 'audio/wav',
+                    desiredSampRate: 2500,
 
                     recorderType: StereoAudioRecorder,
                     numberOfAudioChannels: 1,
@@ -68,7 +68,7 @@ function startVoiceStream() {
                     // get intervals based blobs
                     // value in milliseconds
                     // as you might not want to make detect calls every seconds
-                    timeSlice: 100,
+                    timeSlice: 300,
 
                     //2)
                     // as soon as the stream is available
