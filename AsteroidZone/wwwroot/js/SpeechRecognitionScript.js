@@ -177,6 +177,6 @@ function readTextToSpeech(phrase) {
         msg.rate = 1;
         msg.pitch = 1;
         window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(msg);
+        //window.speechSynthesis.speak(msg);
     }
 }
