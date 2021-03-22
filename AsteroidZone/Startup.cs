@@ -17,6 +17,8 @@ namespace AsteroidZone
 {
     public class Startup
     {
+        private static readonly List<WebSocket> ChatSockets = new List<WebSocket>();
+
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -78,7 +80,9 @@ namespace AsteroidZone
                     {
                         using (WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync())
                         {
-                            await Echo(context, webSocket);
+                            ChatSockets.Add(webSocket);
+                            await SendOthers(context, webSocket);
+                            ChatSockets.Remove(webSocket);
                         }
                     }
                     else
@@ -99,6 +103,29 @@ namespace AsteroidZone
             {
                 endpoints.MapRazorPages();
             });
+        }
+
+        private async Task SendOthers(HttpContext context, WebSocket webSocket)
+        {
+            var buffer = new byte[1024 * 4];
+            WebSocketReceiveResult result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+            while (!result.CloseStatus.HasValue)
+            {
+                await SendOtherSocketsBytes(result, buffer, webSocket);
+                result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+            }
+            await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
+        }
+
+        private static async Task SendOtherSocketsBytes(WebSocketReceiveResult result, byte[] buffer, WebSocket mySocket)
+        {
+            foreach (WebSocket chatSocket in ChatSockets)
+            {
+                if (chatSocket != mySocket)
+                {
+                    await chatSocket.SendAsync(new ArraySegment<byte>(buffer, 0, result.Count), result.MessageType, result.EndOfMessage, CancellationToken.None);
+                }
+            }
         }
 
         private async Task Echo(HttpContext context, WebSocket webSocket)
