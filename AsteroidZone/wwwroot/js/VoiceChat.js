@@ -1,5 +1,6 @@
-﻿var context; // Audio context
-var buf; // Audio buffer
+﻿let context; // Audio context
+let buf; // Audio buffer
+let voiceChatRunning = false, chatWebSocket = null, recordAudio = null, voiceRecStream = null;
 
 (function() {
     if (!window.AudioContext) {
@@ -15,19 +16,23 @@ var buf; // Audio buffer
 
 function playByteArray(blob) {
     const fileReader = new FileReader();
-    fileReader.onload = function () {
-        window.audioArray = this.result;
-    };
-    fileReader.readAsArrayBuffer(blob);
-    if (typeof window.audioArray === 'undefined') {
-        return;
-    }
+    let audioArray = null;
 
-    context.decodeAudioData(window.audioArray,
-        function(buffer) {
-            buf = buffer;
-            play();
-        }).catch(err => console.log(err));
+    fileReader.onload = function () {
+        audioArray = this.result;
+
+        if (audioArray === null) {
+            return;
+        }
+
+        context.decodeAudioData(audioArray,
+            function (buffer) {
+                buf = buffer;
+                play();
+            }).catch(err => console.log(err));
+    };
+
+    fileReader.readAsArrayBuffer(blob);
 }
 
 // Play the loaded file
@@ -43,9 +48,15 @@ function play() {
 
 
 function startVoiceStream() {
+    if (voiceChatRunning) {
+        console.log('Voice Chat is already running. Stop it before starting it again');
+        return;
+    }
+
+    voiceChatRunning = true;
     const urlArr = window.location.href.split("/");
-    window.chatWebSocket = new WebSocket(`wss://${urlArr[2]}/ws_chat`);
-    window.chatWebSocket.onmessage = (event) => {
+    chatWebSocket = new WebSocket(`wss://${urlArr[2]}/ws_chat`);
+    chatWebSocket.onmessage = (event) => {
         playByteArray(event.data);
     }
 
@@ -53,8 +64,8 @@ function startVoiceStream() {
             audio: true
         },
         function(stream) {
-            window.voiceRecStream = stream;
-            window.recordAudio = RecordRTC(stream,
+            voiceRecStream = stream;
+            recordAudio = RecordRTC(stream,
                 {
                     type: 'audio',
                     mimeType: 'audio/wav',
@@ -73,13 +84,13 @@ function startVoiceStream() {
                     //2)
                     // as soon as the stream is available
                     ondataavailable: function (blob) {
-                        if (window.chatWebSocket.readyState === WebSocket.OPEN) {
-                            window.chatWebSocket.send(blob);
+                        if (chatWebSocket.readyState === WebSocket.OPEN) {
+                            chatWebSocket.send(blob);
                         }
                     }
                 });
 
-            window.recordAudio.startRecording();
+            recordAudio.startRecording();
         },
         function(error) {
             console.error(JSON.stringify(error));
@@ -87,24 +98,31 @@ function startVoiceStream() {
 };
 
 function stopVoiceStream() {
-    if (window.voiceRecStream) {
-        window.voiceRecStream.getTracks().forEach(function(track) {
+    if (!voiceChatRunning) {
+        console.log('Voice Chat can\'t be stopped because it is not running. Start it before stopping it.');
+        return;
+    }
+
+    voiceChatRunning = false;
+
+    if (voiceRecStream) {
+        voiceRecStream.getTracks().forEach(function(track) {
             track.stop();
         });
     }
 
-    if (window.recordAudio) {
-        window.recordAudio.stopRecording();
-        window.recordAudio.destroy();
+    if (recordAudio) {
+        recordAudio.stopRecording();
+        recordAudio.destroy();
     }
 
-    if (window.chatWebSocket && window.chatWebSocket.readyState === WebSocket.OPEN) {
-        window.chatWebSocket.close();
+    if (chatWebSocket && chatWebSocket.readyState === WebSocket.OPEN) {
+        chatWebSocket.close();
     }
 }
 
 $(window).on('beforeunload', function () {
-    if (typeof window.chatWebSocket !== 'undefined' && window.chatWebSocket.readyState === WebSocket.OPEN) {
-        window.chatWebSocket.close();
+    if (chatWebSocket !== null && chatWebSocket.readyState === WebSocket.OPEN) {
+        chatWebSocket.close();
     }
 });
