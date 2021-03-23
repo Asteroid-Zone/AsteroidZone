@@ -1,11 +1,10 @@
 ﻿let context; // Audio context
-let buf; // Audio buffer
 let voiceChatRunning = false, chatWebSocket = null, recordAudio = null, voiceRecStream = null;
 
 (function() {
     if (!window.AudioContext) {
         if (!window.webkitAudioContext) {
-            alert("Your browser does not support any AudioContext and cannot play back this audio.");
+            alert('Your browser does not support any AudioContext and cannot play back this audio.');
             return;
         }
         window.AudioContext = window.webkitAudioContext;
@@ -14,32 +13,18 @@ let voiceChatRunning = false, chatWebSocket = null, recordAudio = null, voiceRec
     context = new AudioContext();
 })();
 
-function playByteArray(blob) {
-    const fileReader = new FileReader();
-    let audioArray = null;
-
-    fileReader.onload = function () {
-        audioArray = this.result;
-
-        if (audioArray === null) {
-            return;
-        }
-
-        context.decodeAudioData(audioArray,
-            function (buffer) {
-                buf = buffer;
-                play();
-            }).catch(err => console.log(err));
-    };
-
-    fileReader.readAsArrayBuffer(blob);
+function playByteArray(arrayBuffer) {
+    context.decodeAudioData(arrayBuffer,
+        function (buffer) {
+            play(buffer);
+        }).catch(err => console.log(err));
 }
 
-// Play the loaded file
-function play() {
+// Play the loaded buffer
+function play(buffer) {
     // Create a source node from the buffer
     var source = context.createBufferSource();
-    source.buffer = buf;
+    source.buffer = buffer;
     // Connect to the final output node (the speakers)
     source.connect(context.destination);
     // Play immediately
@@ -56,6 +41,7 @@ function startVoiceStream() {
     voiceChatRunning = true;
     const urlArr = window.location.href.split("/");
     chatWebSocket = new WebSocket(`wss://${urlArr[2]}/ws_chat`);
+    chatWebSocket.binaryType = 'arraybuffer';
     chatWebSocket.onmessage = (event) => {
         playByteArray(event.data);
     }
@@ -73,16 +59,8 @@ function startVoiceStream() {
 
                     recorderType: StereoAudioRecorder,
                     numberOfAudioChannels: 1,
+                    timeSlice: 5,
 
-
-                    //1)
-                    // get intervals based blobs
-                    // value in milliseconds
-                    // as you might not want to make detect calls every seconds
-                    timeSlice: 10,
-
-                    //2)
-                    // as soon as the stream is available
                     ondataavailable: function (blob) {
                         if (chatWebSocket.readyState === WebSocket.OPEN) {
                             chatWebSocket.send(blob);
