@@ -124,7 +124,7 @@ function startNonChromeVoiceRecognition() {
             window.recordAudio = RecordRTC(stream,
                 {
                     type: 'audio',
-                    mimeType: 'audio/webm',
+                    mimeType: 'audio/wav',
                     desiredSampRate: 16000,
 
                     recorderType: StereoAudioRecorder,
@@ -135,7 +135,7 @@ function startNonChromeVoiceRecognition() {
                     // get intervals based blobs
                     // value in milliseconds
                     // as you might not want to make detect calls every seconds
-                    timeSlice: 100,
+                    timeSlice: 10,
 
                     //2)
                     // as soon as the stream is available
