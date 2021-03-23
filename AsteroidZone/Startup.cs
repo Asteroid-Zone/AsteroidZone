@@ -85,6 +85,10 @@ namespace AsteroidZone
                                 ChatSockets.Add(webSocket);
                                 await SendOthers(context, webSocket);
                             }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine(ex.Message);
+                            }
                             finally
                             {
                                 ChatSockets.Remove(webSocket);

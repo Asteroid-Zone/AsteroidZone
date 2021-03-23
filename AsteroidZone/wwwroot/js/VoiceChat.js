@@ -58,7 +58,7 @@ function startVoiceStream() {
                 {
                     type: 'audio',
                     mimeType: 'audio/wav',
-                    desiredSampRate: 10000,
+                    desiredSampRate: 16000,
 
                     recorderType: StereoAudioRecorder,
                     numberOfAudioChannels: 1,
