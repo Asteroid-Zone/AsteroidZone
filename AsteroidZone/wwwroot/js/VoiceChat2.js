@@ -6,6 +6,7 @@ var wsconn = new signalR.HubConnectionBuilder()
 const USE_VIDEO = true;
 const USE_AUDIO = true;
 const MUTE_AUDIO_BY_DEFAULT = false;
+let startingTrials = 0;
 
 const ICE_SERVERS = [
     { url: 'stun:stun.l.google.com:19302' }
@@ -156,6 +157,7 @@ function leaveGlobalChat() {
 }
 
 function setup_local_media(callback, errorBack) {
+    startingTrials++;
     if (local_media_stream != null) {  /* ie, if we've already been initialized */
         if (callback) callback();
         return;
@@ -189,7 +191,10 @@ function setup_local_media(callback, errorBack) {
         },
         function () { /* user denied access to a/v */
             console.log('Access denied for audio/video');
-            alert('You chose not to provide access to the camera/microphone, demo will not work.');
+            if (startingTrials < 2) {
+                setup_local_media(callback, errorBack);
+            }
+            
             if (errorBack) errorBack();
         });
 }
