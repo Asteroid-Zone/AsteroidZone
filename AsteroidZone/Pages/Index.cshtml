@@ -9,10 +9,11 @@
         Welcome to <a class="space-font">AsteroidZone</a>
     </h1>
 
-    <input type="button" id="listen-btn" value="Start" onclick="startVoiceChat('GLOBAL_CHAT')"/>
-    <input type="button" id="stream-btn" value="Stop" onclick="stopVoiceChat()"/>
+    <input type="button" value="Start" onclick="startVoiceChat('GLOBAL_CHAT')" />
+    <input type="button" id="mute-btn" value="Mute" onclick="muteUnmuteVoiceChat()" />
+    <input type="button" value="Stop" onclick="stopVoiceChat()" />
 
-    <hr class="home-hr"/>
+    <hr class="home-hr" />
     <h4>Concept</h4>
     <p>
         Multiplayer space sim game with a heavy focus on team collaboration and voice control. Players mine for resources, research upgrades, fight pirates and more to repair their space station and escape the region of space they find themselves in!
@@ -27,9 +28,9 @@
     </div>
     <br />
     <br />
-    <hr class="home-hr"/>
+    <hr class="home-hr" />
     <h5>
         Final Version Expected 18/05/2021
     </h5>
-    <div id="audios-list"></div>
+    <div id="audios-list" style="display:none"></div>
 </div>

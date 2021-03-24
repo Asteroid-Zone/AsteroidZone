@@ -3,7 +3,7 @@ let signalRConn = new signalR.HubConnectionBuilder()
     .withUrl(hubUrl, signalR.HttpTransportType.WebSockets)
     .configureLogging(signalR.LogLevel.None).build();
 
-const USE_VIDEO = true;
+const USE_VIDEO = false;
 const USE_AUDIO = true;
 const MUTE_AUDIO_BY_DEFAULT = false;
 let startingTrials = 0;
@@ -19,9 +19,11 @@ let peers = {};                /* keep track of our peer connections, indexed by
 let peerMediaElements = {};  /* keep track of our <video>/<audio> tags, indexed by peer_id */
 let chatRunning = false;
 let audioList = null;
+let muteBtn = null;
 
 $(document).ready(function () {
     audioList = $('#audios-list');
+    muteBtn = $('#mute-btn');
     initializeSignalR();
 });
 
@@ -60,6 +62,20 @@ function stopVoiceChat() {
     startingTrials = 0;
 }
 
+function muteUnmuteVoiceChat() {
+    if (!chatRunning) {
+        console.log('Voice chat must be running in order to be mute/unmute');
+        return;
+    }
+
+    localMediaStream.getTracks().forEach(track => track.enabled = !track.enabled);
+    if (muteBtn.val() === 'Mute') {
+        muteBtn.val('Unmute');
+    } else {
+        muteBtn.val('Mute');
+    }
+}
+
 const initializeSignalR = () => {
     signalRConn.start().then(() => {
         console.log('SignalR: Connected');
@@ -68,11 +84,11 @@ const initializeSignalR = () => {
 
 signalRConn.on('AddToCall', (peerId, createOffer) => {
     console.log('Signaling server said to add peer:', peerId, createOffer);
-    if (peerId in peers) {
-        /* This could happen if the user joins multiple channels where the other peer is also in. */
+    /*if (peerId in peers) {
+        /* This could happen if the user joins multiple channels where the other peer is also in.
         console.log('Already connected to peer ', peerId);
         return;
-    }
+    }*/
 
     var peerConnection = new RTCPeerConnection(
         { "iceServers": ICE_SERVERS },
@@ -204,12 +220,6 @@ function setupLocalMedia(callback, errorBack) {
         function (stream) { /* user accepted access to a/v */
             console.log('Access granted to audio/video');
             localMediaStream = stream;
-            const localMedia = USE_VIDEO ? $('<video  width="320" height="240" controls>') : $('<audio>');
-            localMedia.attr('autoplay', 'autoplay');
-            localMedia.attr('muted', 'true'); /* always mute ourselves by default */
-            audioList.append(localMedia);
-            localMedia[0].srcObject = stream;
-
             if (callback) callback();
         },
         function () { /* user denied access to a/v */
