@@ -9,6 +9,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using AsteroidZone.Hubs;
 using AsteroidZone.Middleware;
 using Google.Cloud.Speech.V1;
 using Microsoft.AspNetCore.Http;
@@ -31,6 +32,7 @@ namespace AsteroidZone
         {
             services.AddResponseCompression();
             services.AddRazorPages();
+            services.AddSignalR();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -49,7 +51,7 @@ namespace AsteroidZone
                 app.UseHsts();
             }
 
-            //app.UseHttpsRedirection();
+            app.UseHttpsRedirection();
             app.UseStaticFiles(new StaticFileOptions
             {
                 ServeUnknownFileTypes = true,
@@ -112,6 +114,10 @@ namespace AsteroidZone
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapRazorPages();
+                endpoints.MapHub<ConnectionHub>("/ConnectionHub", options =>
+                    {
+                        options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets;
+                    });
             });
         }
 
