@@ -1,5 +1,5 @@
 ﻿const hubUrl = document.location.pathname + 'ConnectionHub';
-var wsconn = new signalR.HubConnectionBuilder()
+let signalRConn = new signalR.HubConnectionBuilder()
     .withUrl(hubUrl, signalR.HttpTransportType.WebSockets)
     .configureLogging(signalR.LogLevel.None).build();
 
@@ -12,28 +12,61 @@ const ICE_SERVERS = [
     { url: 'stun:stun.l.google.com:19302' }
 ];
 
-const GLOBAL_CHAT = 'GLOBAL_CHAT';
+let chatName = null;
 
-var local_media_stream = null; /* our own microphone / webcam */
-var peers = {};                /* keep track of our peer connections, indexed by peer_id (aka socket.io id) */
-var peer_media_elements = {};  /* keep track of our <video>/<audio> tags, indexed by peer_id */
+let localMediaStream = null; /* our own microphone / webcam */
+let peers = {};                /* keep track of our peer connections, indexed by peer_id (aka socket.io id) */
+let peerMediaElements = {};  /* keep track of our <video>/<audio> tags, indexed by peer_id */
+let chatRunning = false;
+let audioList = null;
 
-$(document).ready(function() {
+$(document).ready(function () {
+    audioList = $('#audios-list');
     initializeSignalR();
 });
 
+function startVoiceChat(chat) {
+    if (chatRunning) {
+        console.log('Voice chat is already running');
+        return;
+    }
+
+    chatName = chat;
+
+    setupLocalMedia(function () {
+        chatRunning = true;
+        /* once the user has given us access to their
+         * microphone/camcorder, join the channel and start peering up */
+        signalRConn.invoke('JoinChat', chatName);
+    });
+}
+
+function stopVoiceChat() {
+    if (!chatRunning) {
+        console.log('Voice chat must be running in order to be stopped');
+        return;
+    }
+
+    signalRConn.invoke('LeaveChat', chatName);
+
+    chatRunning = false;
+    audioList.empty();
+
+    localMediaStream.getTracks().forEach(function (track) {
+        track.stop();
+    });
+    localMediaStream = null;
+
+    startingTrials = 0;
+}
+
 const initializeSignalR = () => {
-    wsconn.start().then(() => {
-        console.log("SignalR: Connected");
-        setup_local_media(function () {
-            /* once the user has given us access to their
-             * microphone/camcorder, join the channel and start peering up */
-            wsconn.invoke('JoinChat', GLOBAL_CHAT);
-        });
+    signalRConn.start().then(() => {
+        console.log('SignalR: Connected');
     }).catch(err => console.log(err));
 };
 
-wsconn.on('AddToCall', (peerId, createOffer) => {
+signalRConn.on('AddToCall', (peerId, createOffer) => {
     console.log('Signaling server said to add peer:', peerId, createOffer);
     if (peerId in peers) {
         /* This could happen if the user joins multiple channels where the other peer is also in. */
@@ -51,7 +84,7 @@ wsconn.on('AddToCall', (peerId, createOffer) => {
 
     peerConnection.onicecandidate = function (event) {
         if (event.candidate) {
-            wsconn.invoke('RelayIceCandidate', GLOBAL_CHAT, peerId, {
+            signalRConn.invoke('RelayIceCandidate', chatName, peerId, {
                 'sdpMLineIndex': event.candidate.sdpMLineIndex,
                 'candidate': event.candidate.candidate
             });
@@ -68,13 +101,13 @@ wsconn.on('AddToCall', (peerId, createOffer) => {
         } else {
             remoteMedia.removeAttr('muted');
         }
-        peer_media_elements[peerId] = remoteMedia;
-        $('body').append(remoteMedia);
-        attachMediaStream(remoteMedia[0], event.stream);
+        peerMediaElements[peerId] = remoteMedia;
+        audioList.append(remoteMedia);
+        remoteMedia[0].srcObject = event.stream;
     }
 
     /* Add our local stream */
-    peerConnection.addStream(local_media_stream);
+    peerConnection.addStream(localMediaStream);
 
     /* Only one side of the peer connection should create the
      * offer, the signaling server picks one to be the offerer. 
@@ -88,7 +121,7 @@ wsconn.on('AddToCall', (peerId, createOffer) => {
                 console.log('Local offer description is: ', localDescription);
                 peerConnection.setLocalDescription(localDescription,
                     function () {
-                        wsconn.invoke('RelaySessionDescription', GLOBAL_CHAT, peerId, localDescription);
+                        signalRConn.invoke('RelaySessionDescription', chatName, peerId, localDescription);
                         console.log('Offer setLocalDescription succeeded');
                     },
                     function () { Alert('Offer setLocalDescription failed!'); }
@@ -100,20 +133,20 @@ wsconn.on('AddToCall', (peerId, createOffer) => {
     }
 });
 
-wsconn.on('RemoveFromCall', (peerId) => {
+signalRConn.on('RemoveFromCall', (peerId) => {
     console.log('Signaling server said to remove peer:', peerId);
-    if (peerId in peer_media_elements) {
-        peer_media_elements[peerId].remove();
+    if (peerId in peerMediaElements) {
+        peerMediaElements[peerId].remove();
     }
     if (peerId in peers) {
         peers[peerId].close();
     }
 
     delete peers[peerId];
-    delete peer_media_elements[config.peer_id];
+    delete peerMediaElements[config.peer_id];
 });
 
-wsconn.on('SessionDescription', function (peerId, remoteDescription) {
+signalRConn.on('SessionDescription', function (peerId, remoteDescription) {
     console.log('Remote description received: user: ', peerId, ' \nwith description: ', remoteDescription);
     var peer = peers[peerId];
 
@@ -128,7 +161,7 @@ wsconn.on('SessionDescription', function (peerId, remoteDescription) {
                         console.log('Answer description is: ', localDescription);
                         peer.setLocalDescription(localDescription,
                             function () {
-                                wsconn.invoke('RelaySessionDescription', GLOBAL_CHAT, peerId, localDescription);
+                                signalRConn.invoke('RelaySessionDescription', chatName, peerId, localDescription);
                                 console.log('Answer setLocalDescription succeeded');
                             },
                             function () { Alert('Answer setLocalDescription failed!'); }
@@ -147,18 +180,14 @@ wsconn.on('SessionDescription', function (peerId, remoteDescription) {
     console.log('Description Object: ', desc);
 });
 
-wsconn.on('IceCandidate', function (peerId, iceCandidate) {
+signalRConn.on('IceCandidate', function (peerId, iceCandidate) {
     const peer = peers[peerId];
     peer.addIceCandidate(new RTCIceCandidate(iceCandidate));
 });
 
-function leaveGlobalChat() {
-    wsconn.invoke('LeaveChat', GLOBAL_CHAT);
-}
-
-function setup_local_media(callback, errorBack) {
+function setupLocalMedia(callback, errorBack) {
     startingTrials++;
-    if (local_media_stream != null) {  /* ie, if we've already been initialized */
+    if (localMediaStream != null) {  /* ie, if we've already been initialized */
         if (callback) callback();
         return;
     }
@@ -166,33 +195,27 @@ function setup_local_media(callback, errorBack) {
      * attach it to an <audio> or <video> tag if they give us access. */
     console.log('Requesting access to local audio / video inputs');
 
-
     navigator.getUserMedia = (navigator.getUserMedia ||
         navigator.webkitGetUserMedia ||
         navigator.mozGetUserMedia ||
         navigator.msGetUserMedia);
 
-    attachMediaStream = function (element, stream) {
-        console.log('DEPRECATED, attachMediaStream will soon be removed.');
-        element.srcObject = stream;
-    };
-
     navigator.getUserMedia({ "audio": USE_AUDIO, "video": USE_VIDEO },
         function (stream) { /* user accepted access to a/v */
             console.log('Access granted to audio/video');
-            local_media_stream = stream;
+            localMediaStream = stream;
             const localMedia = USE_VIDEO ? $('<video  width="320" height="240" controls>') : $('<audio>');
             localMedia.attr('autoplay', 'autoplay');
             localMedia.attr('muted', 'true'); /* always mute ourselves by default */
-            $('body').append(localMedia);
-            attachMediaStream(localMedia[0], stream);
+            audioList.append(localMedia);
+            localMedia[0].srcObject = stream;
 
             if (callback) callback();
         },
         function () { /* user denied access to a/v */
             console.log('Access denied for audio/video');
-            if (startingTrials < 2) {
-                setup_local_media(callback, errorBack);
+            if (startingTrials <= 2) {
+                setupLocalMedia(callback, errorBack);
             }
             
             if (errorBack) errorBack();

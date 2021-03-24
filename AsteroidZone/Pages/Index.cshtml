@@ -9,8 +9,8 @@
         Welcome to <a class="space-font">AsteroidZone</a>
     </h1>
 
-    <input type="button" id="listen-btn" value="Start" onclick="joinGlobalChat()"/>
-    <input type="button" id="stream-btn" value="Stop" onclick="leaveGlobalChat()"/>
+    <input type="button" id="listen-btn" value="Start" onclick="startVoiceChat('GLOBAL_CHAT')"/>
+    <input type="button" id="stream-btn" value="Stop" onclick="stopVoiceChat()"/>
 
     <hr class="home-hr"/>
     <h4>Concept</h4>
@@ -31,4 +31,5 @@
     <h5>
         Final Version Expected 18/05/2021
     </h5>
+    <div id="audios-list"></div>
 </div>
