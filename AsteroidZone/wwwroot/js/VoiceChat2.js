@@ -1,4 +1,5 @@
-﻿const hubUrl = document.location.pathname + 'ConnectionHub';
+﻿const urlArr = window.location.href.split('/');
+const hubUrl = `https://${urlArr[2]}/ConnectionHub`;
 let signalRConn = new signalR.HubConnectionBuilder()
     .withUrl(hubUrl, signalR.HttpTransportType.WebSockets)
     .configureLogging(signalR.LogLevel.None).build();
@@ -15,7 +16,7 @@ const ICE_SERVERS = [
 let chatName = null;
 
 let localMediaStream = null; /* our own microphone / webcam */
-let peers = {};                /* keep track of our peer connections, indexed by peer_id (aka socket.io id) */
+let peers = {};              /* keep track of our peer connections, indexed by peer_id (aka socket.io id) */
 let peerMediaElements = {};  /* keep track of our <video>/<audio> tags, indexed by peer_id */
 let chatRunning = false;
 let audioList = null;
@@ -27,7 +28,7 @@ $(document).ready(function () {
     initializeSignalR();
 });
 
-function startVoiceChat(chat) {
+function joinVoiceChat(chat) {
     if (chatRunning) {
         console.log('Voice chat is already running');
         return;
@@ -40,12 +41,15 @@ function startVoiceChat(chat) {
         /* once the user has given us access to their
          * microphone/camcorder, join the channel and start peering up */
         signalRConn.invoke('JoinChat', chatName);
+
+        // Start the chat muted
+        muteUnmuteMyselfInVoiceChat();
     });
 }
 
-function stopVoiceChat() {
+function leaveVoiceChat() {
     if (!chatRunning) {
-        console.log('Voice chat must be running in order to be stopped');
+        console.log('Voice chat must be running in order to be left');
         return;
     }
 
@@ -60,15 +64,18 @@ function stopVoiceChat() {
     localMediaStream = null;
 
     startingTrials = 0;
+
+    muteBtn.val('Mute');
 }
 
-function muteUnmuteVoiceChat() {
+function muteUnmuteMyselfInVoiceChat() {
     if (!chatRunning) {
         console.log('Voice chat must be running in order to be mute/unmute');
         return;
     }
 
     localMediaStream.getTracks().forEach(track => track.enabled = !track.enabled);
+
     if (muteBtn.val() === 'Mute') {
         muteBtn.val('Unmute');
     } else {
@@ -83,7 +90,6 @@ const initializeSignalR = () => {
 };
 
 signalRConn.on('AddToCall', (peerId, createOffer) => {
-    console.log('Signaling server said to add peer:', peerId, createOffer);
     /*if (peerId in peers) {
         /* This could happen if the user joins multiple channels where the other peer is also in.
         console.log('Already connected to peer ', peerId);
@@ -108,8 +114,6 @@ signalRConn.on('AddToCall', (peerId, createOffer) => {
     }
 
     peerConnection.onaddstream = function (event) {
-        console.log('onAddStream', event);
-
         const remoteMedia = USE_VIDEO ? $('<video width="320" height="240" controls>') : $('<audio>');
         remoteMedia.attr('autoplay', 'autoplay');
         if (MUTE_AUDIO_BY_DEFAULT) {
@@ -131,14 +135,11 @@ signalRConn.on('AddToCall', (peerId, createOffer) => {
      * create an offer, then send back an answer 'sessionDescription' to us
      */
     if (createOffer) {
-        console.log('Creating RTC offer to ', peerId);
         peerConnection.createOffer(
             function (localDescription) {
-                console.log('Local offer description is: ', localDescription);
                 peerConnection.setLocalDescription(localDescription,
                     function () {
                         signalRConn.invoke('RelaySessionDescription', chatName, peerId, localDescription);
-                        console.log('Offer setLocalDescription succeeded');
                     },
                     function () { Alert('Offer setLocalDescription failed!'); }
                 );
@@ -150,7 +151,6 @@ signalRConn.on('AddToCall', (peerId, createOffer) => {
 });
 
 signalRConn.on('RemoveFromCall', (peerId) => {
-    console.log('Signaling server said to remove peer:', peerId);
     if (peerId in peerMediaElements) {
         peerMediaElements[peerId].remove();
     }
@@ -163,29 +163,23 @@ signalRConn.on('RemoveFromCall', (peerId) => {
 });
 
 signalRConn.on('SessionDescription', function (peerId, remoteDescription) {
-    console.log('Remote description received: user: ', peerId, ' \nwith description: ', remoteDescription);
     var peer = peers[peerId];
 
     const desc = new RTCSessionDescription(remoteDescription);
     const stuff = peer.setRemoteDescription(desc,
         function () {
-            console.log('setRemoteDescription succeeded');
             if (remoteDescription.type === 'offer') {
-                console.log('Creating answer');
                 peer.createAnswer(
                     function (localDescription) {
-                        console.log('Answer description is: ', localDescription);
                         peer.setLocalDescription(localDescription,
                             function () {
                                 signalRConn.invoke('RelaySessionDescription', chatName, peerId, localDescription);
-                                console.log('Answer setLocalDescription succeeded');
                             },
                             function () { Alert('Answer setLocalDescription failed!'); }
                         );
                     },
                     function (error) {
-                        console.log('Error creating answer: ', error);
-                        console.log(peer);
+                        console.log('Error creating answer: ', error, peer);
                     });
             }
         },
@@ -193,7 +187,6 @@ signalRConn.on('SessionDescription', function (peerId, remoteDescription) {
             console.log('setRemoteDescription error: ', error);
         }
     );
-    console.log('Description Object: ', desc);
 });
 
 signalRConn.on('IceCandidate', function (peerId, iceCandidate) {
@@ -209,8 +202,6 @@ function setupLocalMedia(callback, errorBack) {
     }
     /* Ask user for permission to use the computers microphone and/or camera, 
      * attach it to an <audio> or <video> tag if they give us access. */
-    console.log('Requesting access to local audio / video inputs');
-
     navigator.getUserMedia = (navigator.getUserMedia ||
         navigator.webkitGetUserMedia ||
         navigator.mozGetUserMedia ||
@@ -218,7 +209,6 @@ function setupLocalMedia(callback, errorBack) {
 
     navigator.getUserMedia({ "audio": USE_AUDIO, "video": USE_VIDEO },
         function (stream) { /* user accepted access to a/v */
-            console.log('Access granted to audio/video');
             localMediaStream = stream;
             if (callback) callback();
         },

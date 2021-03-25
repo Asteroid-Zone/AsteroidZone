@@ -3,15 +3,14 @@
 @{
     ViewData["Title"] = "Home page";
 }
-<script src="~/js/VoiceChat2.js"></script>
 <div class="text-center">
     <h1 class="display-4">
         Welcome to <a class="space-font">AsteroidZone</a>
     </h1>
 
-    <input type="button" value="Start" onclick="startVoiceChat('GLOBAL_CHAT')" />
-    <input type="button" id="mute-btn" value="Mute" onclick="muteUnmuteVoiceChat()" />
-    <input type="button" value="Stop" onclick="stopVoiceChat()" />
+    <input type="button" value="Start" onclick="joinVoiceChat('GLOBAL_CHAT')" />
+    <input type="button" id="mute-btn" value="Mute" onclick="muteUnmuteMyselfInVoiceChat()" />
+    <input type="button" value="Stop" onclick="leaveVoiceChat()" />
 
     <hr class="home-hr" />
     <h4>Concept</h4>
@@ -32,5 +31,4 @@
     <h5>
         Final Version Expected 18/05/2021
     </h5>
-    <div id="audios-list" style="display:none"></div>
 </div>

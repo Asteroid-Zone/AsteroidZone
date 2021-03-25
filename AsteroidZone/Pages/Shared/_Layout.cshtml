@@ -16,6 +16,7 @@
     <script src="https://www.WebRTC-Experiment.com/RecordRTC.js"></script>
     <script src="~/js/SpeechRecognitionScript.js"></script>
     <script src="~/lib/signalr/dist/browser/signalr.min.js"></script>
+    <script src="~/js/VoiceChat2.js"></script>
 </head>
 <body>
     <header>
@@ -46,6 +47,7 @@
         <main role="main" class="pb-3">
             @RenderBody()
         </main>
+        <div id="audios-list" style="display:none"></div>
     </div>
 
 <footer class="border-top footer bg-dark">
