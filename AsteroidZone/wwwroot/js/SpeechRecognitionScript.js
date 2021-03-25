@@ -1,4 +1,10 @@
-﻿/**
+﻿let recognition = null;
+let recognitionWebSocket = null;
+let voiceRecStream = null;
+let recordAudio = null;
+let voiceRecIsRunning = false;
+
+/**
  * Checks if the current browser is Google Chrome
  */
 function isChrome() {
@@ -14,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Attach recognition object to window so that it can be accessed outside of this scope (at start and stop recognition functions called by Unity)
-    window.recognition = new SpeechRecognition();
+    recognition = new SpeechRecognition();
     const speechRecognitionList = new SpeechGrammarList();
 
     // Check https://developer.syn.co.in/tutorial/speech/jsgf-grammar.html
@@ -63,6 +69,13 @@ var flagStopRecognition = false;
  * Called within Unity to START the voice recognition process.
  */
 function startVoiceRecognition() {
+    if (voiceRecIsRunning) {
+        console.log('Voice Recognition is already running');
+        return;
+    }
+
+    voiceRecIsRunning = true;
+
     if (isChrome()) {
         startChromeVoiceRecognition();
         console.log("Chrome Voice Rec started");
@@ -77,6 +90,13 @@ function startVoiceRecognition() {
  * Called within Unity to STOP the voice recognition process.
  */
 function stopVoiceRecognition() {
+    if (!voiceRecIsRunning) {
+        console.log('Voice Recognition must be running in order to be stopped');
+        return;
+    }
+
+    voiceRecIsRunning = false;
+
     if (isChrome()) {
         stopChromeVoiceRecognition();
     } else {
@@ -88,7 +108,7 @@ function stopVoiceRecognition() {
  * Starts the voice recognition process for Google Chrome Browser
  */
 function startChromeVoiceRecognition() {
-    if (window.recognition) {
+    if (recognition) {
         flagStopRecognition = false;
         recognition.start();
     }
@@ -98,7 +118,7 @@ function startChromeVoiceRecognition() {
  * Stops the voice recognition process for Google Chrome Browser
  */
 function stopChromeVoiceRecognition() {
-    if (window.recognition) {
+    if (recognition) {
         flagStopRecognition = true;
         recognition.stop();
     }
@@ -106,8 +126,8 @@ function stopChromeVoiceRecognition() {
 
 function startNonChromeVoiceRecognition() {
     const urlArr = window.location.href.split("/");
-    window.recognitionWebSocket = new WebSocket(`wss://${urlArr[2]}/ws_vr`);
-    window.recognitionWebSocket.onmessage = (event) => {
+    recognitionWebSocket = new WebSocket(`wss://${urlArr[2]}/ws_vr`);
+    recognitionWebSocket.onmessage = (event) => {
         if (typeof unityInstance === 'undefined') {
             console.log(event.data);
         } else {
@@ -120,8 +140,8 @@ function startNonChromeVoiceRecognition() {
             audio: true
         },
         function(stream) {
-            window.voiceRecStream = stream;
-            window.recordAudio = RecordRTC(stream,
+            voiceRecStream = stream;
+            recordAudio = RecordRTC(stream,
                 {
                     type: 'audio',
                     mimeType: 'audio/wav',
@@ -140,11 +160,11 @@ function startNonChromeVoiceRecognition() {
                     //2)
                     // as soon as the stream is available
                     ondataavailable: function(blob) {
-                        window.recognitionWebSocket.send(blob);
+                        recognitionWebSocket.send(blob);
                     }
                 });
             
-            window.recordAudio.startRecording();
+            recordAudio.startRecording();
         },
         function(error) {
             console.error(JSON.stringify(error));
@@ -152,19 +172,19 @@ function startNonChromeVoiceRecognition() {
 };
 
 function stopNonChromeVoiceRecognition() {
-    if (window.voiceRecStream) {
-        window.voiceRecStream.getTracks().forEach(function (track) {
+    if (voiceRecStream) {
+        voiceRecStream.getTracks().forEach(function (track) {
             track.stop();
         });
     }
 
-    if (window.recordAudio) {
-        window.recordAudio.stopRecording();
-        window.recordAudio.destroy();
+    if (recordAudio) {
+        recordAudio.stopRecording();
+        recordAudio.destroy();
     }
 
-    if (window.recognitionWebSocket && window.recognitionWebSocket.readyState === WebSocket.OPEN) {
-        window.recognitionWebSocket.close();
+    if (recognitionWebSocket && recognitionWebSocket.readyState === WebSocket.OPEN) {
+        recognitionWebSocket.close();
     }
 }
 
