@@ -30,14 +30,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
     recognition.onresult = function (event) {
         var interimTranscript = '';
+        var final = false;
         for (let i = event.resultIndex; i < event.results.length; ++i) {
             interimTranscript += event.results[i][0].transcript;
+            if (event.results[i].isFinal) final = true;
         }
 
         if (typeof unityInstance === 'undefined') {
             console.log(interimTranscript);
         } else {
-            unityInstance.SendMessage('CommandListener', 'GetResponse', interimTranscript);
+            if (final) unityInstance.SendMessage('CommandListener', 'GetFinalResponse', interimTranscript);
+            else unityInstance.SendMessage('CommandListener', 'GetResponse', interimTranscript);
         }
     }
 
