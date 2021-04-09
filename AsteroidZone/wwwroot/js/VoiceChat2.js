@@ -16,7 +16,7 @@ const ICE_SERVERS = [
 let chatName = null;
 
 let localMediaStream = null; /* our own microphone / webcam */
-let peers = {};              /* keep track of our peer connections, indexed by peer_id (aka socket.io id) */
+let peers = {};              /* keep track of our peer connections, indexed by peer_id */
 let peerMediaElements = {};  /* keep track of our <video>/<audio> tags, indexed by peer_id */
 let chatRunning = false;
 let audioList = null;
