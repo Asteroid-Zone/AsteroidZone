@@ -10,7 +10,7 @@ const MUTE_AUDIO_BY_DEFAULT = false;
 let startingTrials = 0;
 
 const ICE_SERVERS = [
-    { url: 'stun:stun.l.google.com:19302' }
+    { urls: 'stun:stun.l.google.com:19302' }
 ];
 
 let chatName = null;
@@ -42,7 +42,7 @@ function joinVoiceChat(chat) {
         signalRConn.invoke('JoinChat', chatName);
 
         // Start the chat muted
-        muteMyselfInVoiceChat();
+        //muteMyselfInVoiceChat();
     });
 }
 
@@ -71,7 +71,7 @@ function muteMyselfInVoiceChat() {
         return;
     }
 
-    localMediaStream.getTracks().forEach(track => track.enabled = false);
+    localMediaStream.getAudioTracks().forEach(track => track.enabled = false);
 }
 
 function unmuteMyselfInVoiceChat() {
@@ -80,7 +80,7 @@ function unmuteMyselfInVoiceChat() {
         return;
     }
 
-    localMediaStream.getTracks().forEach(track => track.enabled = true);
+    localMediaStream.getAudioTracks().forEach(track => track.enabled = true);
 }
 
 const initializeSignalR = () => {
