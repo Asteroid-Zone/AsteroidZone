@@ -24,7 +24,6 @@ let muteBtn = null;
 
 $(document).ready(function () {
     audioList = $('#audios-list');
-    muteBtn = $('#mute-btn');
     initializeSignalR();
 });
 
@@ -43,7 +42,7 @@ function joinVoiceChat(chat) {
         signalRConn.invoke('JoinChat', chatName);
 
         // Start the chat muted
-        muteUnmuteMyselfInVoiceChat();
+        muteMyselfInVoiceChat();
     });
 }
 
@@ -64,23 +63,24 @@ function leaveVoiceChat() {
     localMediaStream = null;
 
     startingTrials = 0;
-
-    muteBtn.val('Mute');
 }
 
-function muteUnmuteMyselfInVoiceChat() {
+function muteMyselfInVoiceChat() {
     if (!chatRunning) {
-        console.log('Voice chat must be running in order to be mute/unmute');
+        console.log('Voice chat must be running in order to be mute');
         return;
     }
 
-    localMediaStream.getTracks().forEach(track => track.enabled = !track.enabled);
+    localMediaStream.getTracks().forEach(track => track.enabled = false);
+}
 
-    if (muteBtn.val() === 'Mute') {
-        muteBtn.val('Unmute');
-    } else {
-        muteBtn.val('Mute');
+function unmuteMyselfInVoiceChat() {
+    if (!chatRunning) {
+        console.log('Voice chat must be running in order to be un-mute');
+        return;
     }
+
+    localMediaStream.getTracks().forEach(track => track.enabled = true);
 }
 
 const initializeSignalR = () => {
