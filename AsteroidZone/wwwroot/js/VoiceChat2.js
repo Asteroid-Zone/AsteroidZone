@@ -42,7 +42,7 @@ function joinVoiceChat(chat) {
         signalRConn.invoke('JoinChat', chatName);
 
         // Start the chat muted
-        //muteMyselfInVoiceChat();
+        muteMyselfInVoiceChat();
     });
 }
 
