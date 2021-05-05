@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
@@ -18,6 +19,9 @@ namespace AsteroidZone
 {
     public class Startup
     {
+        /// <summary>
+        /// (LEGACY CHAT) List of sockets that should receive the bytes from the current user's microphone.
+        /// </summary>
         private static readonly List<WebSocket> ChatSockets = new List<WebSocket>();
 
         public Startup(IConfiguration configuration)
@@ -31,7 +35,11 @@ namespace AsteroidZone
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddResponseCompression();
+
+            // Razor pages are the technology used for visualising the HTML (they work by having a html with embedded C# code and code behind)
             services.AddRazorPages();
+
+            // SignalR is a signalling server used for the WebRTC communication between users
             services.AddSignalR();
         }
 
@@ -62,12 +70,14 @@ namespace AsteroidZone
             app.UseWebSockets();
             app.Use(async (context, next) =>
             {
+                // Web socket link for the voice recognition
                 if (context.Request.Path == "/ws_vr")
                 {
                     if (context.WebSockets.IsWebSocketRequest)
                     {
                         using (WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync())
                         {
+                            // Start Google Cloud's voice recognition
                             await GoogleCloudVoiceRec(context, webSocket);
                         }
                     }
@@ -76,6 +86,8 @@ namespace AsteroidZone
                         context.Response.StatusCode = 400;
                     }
                 }
+
+                // (LEGACY CHAT) Web socket link for the legacy voice chat (based on WebSockets)
                 else if (context.Request.Path == "/ws_chat")
                 {
                     if (context.WebSockets.IsWebSocketRequest)
@@ -84,7 +96,10 @@ namespace AsteroidZone
                         {
                             try
                             {
+                                // Add the current socket to the list of sockets
                                 ChatSockets.Add(webSocket);
+
+                                // Start sending the bytes from the current client to the rest of the clients
                                 await SendOthers(context, webSocket);
                             }
                             catch (Exception ex)
@@ -93,6 +108,7 @@ namespace AsteroidZone
                             }
                             finally
                             {
+                                // Remove the current user from the subscription list
                                 ChatSockets.Remove(webSocket);
                             }
                         }
@@ -114,46 +130,86 @@ namespace AsteroidZone
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapRazorPages();
+
+                // The connection hub is a signalling server (based on SignalR) used for real time functions execution between the client and the server
                 endpoints.MapHub<ConnectionHub>("/ConnectionHub", options =>
                     {
+                        // The signalling server will be based on web sockets for the Real Time communtcation
                         options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets;
                     });
             });
         }
 
-        private async Task SendOthers(HttpContext context, WebSocket webSocket)
+        /// <summary>
+        /// Sends the microphone raw bytes of the current client to the rest of the clients
+        /// </summary>
+        /// <param name="context">HTTP Context of the WebSocket connection</param>
+        /// <param name="webSocket">Web Socket connection object</param>
+        /// <returns>Task object as the method is asynchronous</returns>
+        private static async Task SendOthers(HttpContext context, WebSocket webSocket)
         {
+            // Create a buffer for fetching the microphone bytes
             var buffer = new byte[1024 * 4];
+
+            // Receive the initial bytes
             WebSocketReceiveResult result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+
+            // Continue receiving bytes until a closing request is made
             while (!result.CloseStatus.HasValue)
             {
+                // Send the bytes from the current client's microphone to the rest of the clients
                 await SendOtherSocketsBytes(result, buffer, webSocket);
+
+                // Receive new bytes
                 result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
             }
+
+            // Close the Web Socket connection
             await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
         }
 
+        /// <summary>
+        /// Send the received bytes from one of the sockets to the rest of the sockets
+        /// </summary>
+        /// <param name="result">Socket received data object</param>
+        /// <param name="buffer">buffer storing the received bytes</param>
+        /// <param name="mySocket">The socket from which the data was received that should not receive its own bytes</param>
+        /// <returns>Task object as the method is asynchronous</returns>
         private static async Task SendOtherSocketsBytes(WebSocketReceiveResult result, byte[] buffer, WebSocket mySocket)
         {
-            foreach (WebSocket chatSocket in ChatSockets)
+            // Send the bytes to all of the rest of the sockets except the socket of the current user
+            foreach (var chatSocket in ChatSockets.Where(chatSocket => chatSocket != mySocket))
             {
-                if (chatSocket != mySocket)
-                {
-                    await chatSocket.SendAsync(new ArraySegment<byte>(buffer, 0, result.Count), result.MessageType, result.EndOfMessage, CancellationToken.None);
-                }
+                // Send the bytes asynchronously
+                await chatSocket.SendAsync(new ArraySegment<byte>(buffer, 0, result.Count), result.MessageType, result.EndOfMessage, CancellationToken.None);
             }
         }
 
+        /// <summary>
+        /// Method used for testing sockets. Whatever it receives as bytes, it sends back to the socket
+        /// </summary>
+        /// <param name="context">HTTP Context of the WebSocket connection</param>
+        /// <param name="webSocket">Web Socket connection object</param>
+        /// <returns>Task object as the method is asynchronous</returns>
         private async Task Echo(HttpContext context, WebSocket webSocket)
         {
+            // Create a buffer for fetching the microphone bytes
             var buffer = new byte[1024 * 4];
+
+            // Receive the initial bytes
             WebSocketReceiveResult result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+
+            // Continue receiving bytes until a closing request is made
             while (!result.CloseStatus.HasValue)
             {
+                // Send the bytes back to the socket (like an echo)
                 await webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, result.Count), result.MessageType, result.EndOfMessage, CancellationToken.None);
 
+                // Receive new bytes
                 result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
             }
+
+            // Close the Web Socket connection
             await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
         }
 
@@ -165,11 +221,14 @@ namespace AsteroidZone
                 var speechBuilder = new SpeechClientBuilder { JsonCredentials = Credentials };
                 var speech = speechBuilder.Build();
                 var streamingCall = speech.StreamingRecognize();
-                // Write the initial request with the config.
+
+                // Add the Phrases list as grammar. Note: this functionality hasn't actually been implemented by Google, so it doesn't make any difference
                 var speechContext = new SpeechContext
                 {
                     Phrases = { Phrases }
                 };
+
+                // Write the initial request with the config.
                 var speechConfig = new RecognitionConfig
                 {
                     Encoding = RecognitionConfig.Types.AudioEncoding.Linear16,
@@ -189,7 +248,7 @@ namespace AsteroidZone
                         }
                     });
 
-                // Print responses as they arrive.
+                // Send back responses as they arrive.
                 Task printResponses = Task.Run(async () =>
                 {
                     var responseStream = streamingCall.GetResponseStream();
@@ -200,7 +259,7 @@ namespace AsteroidZone
                         {
                             foreach (SpeechRecognitionAlternative alternative in result.Alternatives)
                             {
-                                // Print the result on the console and send back via the websocket
+                                // Send back the recognised phrases via the websocket
                                 await SendStringToSocket(webSocket, alternative.Transcript, CancellationToken.None);
                             }
                         }
@@ -210,15 +269,20 @@ namespace AsteroidZone
                 // Create a buffer which will be used to 
                 var buffer = new byte[128 * 1024];
 
+                // Receive the bytes from the client's microphone
                 WebSocketReceiveResult socketResult = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+
+                // Continue receiving until a closing request is made
                 while (!socketResult.CloseStatus.HasValue)
                 {
+                    // Write the received bytes to the streaming object
                     streamingCall.WriteAsync(
                         new StreamingRecognizeRequest
                         {
                             AudioContent = Google.Protobuf.ByteString.CopyFrom(buffer, 0, socketResult.Count)
                         }).Wait();
 
+                    // Continue receiving bytes from the client's microphone
                     socketResult = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
                 }
 
@@ -237,13 +301,30 @@ namespace AsteroidZone
             }
         }
 
+        /// <summary>
+        /// Sends a string to a websocket
+        /// </summary>
+        /// <param name="ws">web socket connection object</param>
+        /// <param name="data">string to be send</param>
+        /// <param name="cancellation">cancellation token</param>
+        /// <returns></returns>
         private static Task SendStringToSocket(WebSocket ws, string data, CancellationToken cancellation)
         {
+            // Get the string bytes
             var encoded = Encoding.UTF8.GetBytes(data);
+
+            // Add the bytes to a buffer
             var buffer = new ArraySegment<byte>(encoded, 0, encoded.Length);
+
+            // Send the bytes buffer via the socket to the client
             return ws.SendAsync(buffer, WebSocketMessageType.Text, true, cancellation);
         }
 
+        /// <summary>
+        /// Credentials JSON used for connecting to Google Cloud's speech recognition services object.
+        /// Note: a string is being used even though there is a key.json file, because the live version (Heroku.com) stores file differently,
+        ///       so they could not be read from inside of the solution.
+        /// </summary>
         private const string Credentials = @"{
           ""type"": ""service_account"",
           ""project_id"": ""asteroidzone"",
@@ -257,6 +338,10 @@ namespace AsteroidZone
           ""client_x509_cert_url"": ""https://www.googleapis.com/robot/v1/metadata/x509/my-speech-to-text-sa%40asteroidzone.iam.gserviceaccount.com""
         }";
 
+        /// <summary>
+        /// Phrases used to create a grammar context for the voice recognition
+        /// Note: Google's cloud speech recognition object does not really use this as it is not fully implemented by Google
+        /// </summary>
         public static readonly List<string> Phrases = new List<string>
         {
             "north",
@@ -266,8 +351,7 @@ namespace AsteroidZone
             "go",
             "move",
             "left",
-            "right",
-
+            "right"
         };
     }
 }
