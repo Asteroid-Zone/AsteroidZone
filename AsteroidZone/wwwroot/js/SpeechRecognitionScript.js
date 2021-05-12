@@ -1,7 +1,16 @@
-﻿let recognition = null;
+﻿/** Voice Recognition object */
+let recognition = null;
+
+/** Web Socket used for sending the microphone raw data to the server and receiving the result phrases */
 let recognitionWebSocket = null;
+
+/** The microphone stream recording the microphone data and used for sending that data via the socket */
 let voiceRecStream = null;
+
+/**The RecordRTC object used for recording the voice stream and converting the recorded data stream to the necessary format */
 let recordAudio = null;
+
+/** Holds whether voice recognition is currently running */
 let voiceRecIsRunning = false;
 
 /**
@@ -148,7 +157,7 @@ function startNonChromeVoiceRecognition() {
                 {
                     type: 'audio',
                     mimeType: 'audio/wav',
-                    desiredSampRate: 16000,
+                    desiredSampRate: 44100,
 
                     recorderType: StereoAudioRecorder,
                     numberOfAudioChannels: 1,
@@ -158,12 +167,14 @@ function startNonChromeVoiceRecognition() {
                     // get intervals based blobs
                     // value in milliseconds
                     // as you might not want to make detect calls every seconds
-                    timeSlice: 10,
+                    timeSlice: 500,
 
                     //2)
                     // as soon as the stream is available
-                    ondataavailable: function(blob) {
-                        recognitionWebSocket.send(blob);
+                    ondataavailable: function (blob) {
+                        if (recognitionWebSocket.readyState === 1) {
+                            recognitionWebSocket.send(blob);
+                        }
                     }
                 });
             

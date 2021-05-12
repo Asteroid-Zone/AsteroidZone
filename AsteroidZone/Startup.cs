@@ -232,7 +232,7 @@ namespace AsteroidZone
                 var speechConfig = new RecognitionConfig
                 {
                     Encoding = RecognitionConfig.Types.AudioEncoding.Linear16,
-                    SampleRateHertz = 16000,
+                    SampleRateHertz = 44100,
                     AudioChannelCount = 1,
                     LanguageCode = "en",
                     SpeechContexts = { speechContext }
