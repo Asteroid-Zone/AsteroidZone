@@ -20,6 +20,12 @@ namespace AsteroidZone
     public class Startup
     {
         /// <summary>
+        /// Marker being appended to the final speech recognition result, before sending back to the client
+        /// via the WebSocket.
+        /// </summary>
+        private const string SpeechRecFinalResultMarker = "<FINAL>";
+
+        /// <summary>
         /// (LEGACY CHAT) List of sockets that should receive the bytes from the current user's microphone.
         /// </summary>
         private static readonly List<WebSocket> ChatSockets = new List<WebSocket>();
@@ -265,8 +271,16 @@ namespace AsteroidZone
                         {
                             foreach (SpeechRecognitionAlternative alternative in result.Alternatives)
                             {
-                                // Send back the recognised phrases via the websocket
-                                await SendStringToSocket(webSocket, alternative.Transcript, CancellationToken.None);
+                                // Send back the recognised phrases via the websocket and 
+                                // if it is final put the necessary tag
+                                if (result.IsFinal)
+                                {
+                                    await SendStringToSocket(webSocket, SpeechRecFinalResultMarker + alternative.Transcript, CancellationToken.None);
+                                }
+                                else
+                                {
+                                    await SendStringToSocket(webSocket, alternative.Transcript, CancellationToken.None);
+                                }
                             }
                         }
                     }

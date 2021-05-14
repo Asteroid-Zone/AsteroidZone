@@ -13,8 +13,11 @@ let recordAudio = null;
 /** Holds whether voice recognition is currently running */
 let voiceRecIsRunning = false;
 
-// A flag used when the recognition should be stopped and then the onend listener should not start again
-var flagStopRecognition = false;
+/** A flag used when the recognition should be stopped and then the onend listener should not start again */
+let flagStopRecognition = false;
+
+/** Marker being appended to the final speech recognition result */
+const speechRecFinalResultMarker = '<FINAL>';
 
 /**
  * Checks if the current browser is Google Chrome or not. Returns true if Chrome and false otherwise.
@@ -73,10 +76,10 @@ function initialiseChromeSpeechRec() {
 
         // Check whether the current context has the unity instance and if so send the result to it. Otherwise, just print on the console
         if (typeof unityInstance === 'undefined') {
-            console.log(interimTranscript);
+            console.log((final ? `${speechRecFinalResultMarker} ` : '') + interimTranscript);
         } else {
-            if (final) unityInstance.SendMessage('CommandListener', 'GetFinalResponse', interimTranscript);
-            else unityInstance.SendMessage('CommandListener', 'GetResponse', interimTranscript);
+            // Check whether the recognised text is final and call the necessary function
+            unityInstance.SendMessage('CommandListener', final ? 'GetFinalResponse' : 'GetResponse', interimTranscript);
         }
     }
 
@@ -177,11 +180,19 @@ function startNonChromeVoiceRecognition() {
 
     // Set the handler when a message is received
     recognitionWebSocket.onmessage = (event) => {
+        // Extract the recognised phrase
+        const phrase = event.data;
+
+        // Remove the final marker from the phrase
+        const phraseNoFinalMarker = phrase.replace(speechRecFinalResultMarker, '');
+
+        // Check whether the phrase was final
+        const phraseIsFinal = phrase !== phraseNoFinalMarker;
         // Check whether the current context has the unity instance and if so send the result to it. Otherwise, just print on the console
         if (typeof unityInstance === 'undefined') {
-            console.log(event.data);
+            console.log((phraseIsFinal ? `${speechRecFinalResultMarker} ` : '') + phraseNoFinalMarker);
         } else {
-            unityInstance.SendMessage('CommandListener', 'GetResponse', event.data);
+            unityInstance.SendMessage('CommandListener', phraseIsFinal ? 'GetFinalResponse' : 'GetResponse', phraseNoFinalMarker);
         }
     }
 
