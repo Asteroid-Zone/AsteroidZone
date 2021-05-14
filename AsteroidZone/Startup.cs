@@ -213,6 +213,12 @@ namespace AsteroidZone
             await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
         }
 
+        /// <summary>
+        /// WebSocket handler method for the Google Cloud Voice Recognition API
+        /// </summary>
+        /// <param name="context">HTTP Context for the WebSocket connection</param>
+        /// <param name="webSocket">WebSocket Connection object</param>
+        /// <returns>Asynchronous method Task</returns>
         private static async Task GoogleCloudVoiceRec(HttpContext context, WebSocket webSocket)
         {
             try
