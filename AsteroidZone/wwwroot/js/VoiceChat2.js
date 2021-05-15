@@ -75,9 +75,6 @@ function joinVoiceChat(chat) {
         /* once the user has given us access to their
          * microphone/camcorder, join the channel and start peering up */
         signalRConn.invoke('JoinChat', chatName);
-
-        // Start the chat muted
-        muteMyselfInVoiceChat();
     });
 }
 
@@ -292,7 +289,7 @@ signalRConn.on('SessionDescription', function (peerId, remoteDescription) {
 });
 
 /**
- * Used for receiving the ice candidate of another peer in the voice chat
+ * Used for receiving the ice candidate of another peer in the voice chatmute
  * @param {any} peerId The ID of the peer whose ICE candidate was received
  * @param {any} iceCandidate the ICE candidate of the peer
  */
