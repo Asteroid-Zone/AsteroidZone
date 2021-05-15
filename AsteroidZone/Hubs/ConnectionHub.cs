@@ -131,9 +131,35 @@ namespace AsteroidZone.Hubs
 
     public interface IConnectionHub
     {
+        /// <summary>
+        /// Add the user with the specific connection ID to 'my' list of connection
+        /// </summary>
+        /// <param name="connectionId">peer to be added</param>
+        /// <param name="createOffer">should I be the one to create the WebRTC offer</param>
+        /// <returns>Async Task</returns>
         Task AddToCall(string connectionId, bool createOffer);
+
+        /// <summary>
+        /// Remove the user with the specific connection ID from 'my' list of connections
+        /// </summary>
+        /// <param name="connectionId">peer to be removed</param>
+        /// <returns>Async Task</returns>
         Task RemoveFromCall(string connectionId);
+
+        /// <summary>
+        /// Provide session description from a peer
+        /// </summary>
+        /// <param name="connectionId">peer whose session description is being provided</param>
+        /// <param name="sessionDescription">session description object</param>
+        /// <returns>Async Task</returns>
         Task SessionDescription(string connectionId, object sessionDescription);
+
+        /// <summary>
+        /// Provide ICE candidate from a peer
+        /// </summary>
+        /// <param name="connectionId">peer whose ICE candidate is being provided</param>
+        /// <param name="iceCandidate">ICE candidate object</param>
+        /// <returns>Async Task</returns>
         Task IceCandidate(string connectionId, object iceCandidate);
     }
 }
